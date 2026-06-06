@@ -40,6 +40,7 @@ jobs:
           alr exec -- gprbuild -p -XTRACE=off -P example/example.gpr
           ./example/bin/hello_world
           ./example/bin/hello_world_dsl
+          ./example/bin/hello_world_compiled
 
       - name: Build & run the example with tracing
         run: |
