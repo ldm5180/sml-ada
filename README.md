@@ -32,12 +32,13 @@ actions are **named** rather than stored as subprogram pointers. Naming them
 keeps the table pure data, lets the compiler inline the dispatch, makes the
 `case` arms exhaustiveness-checked, and keeps the engine provable with SPARK.
 
-## Two layers
+## Layers
 
 | Unit | Use it when | Notes |
 |------|-------------|-------|
 | `Sml_Ada.State_Machines` | plain state graph, no guards/actions | tiny; a `Machine` is one enum; **formally proven** (see `proof/`) |
 | `Sml_Ada.Machines` | guards, actions, payload-carrying events | the layer shown above |
+| `Sml_Ada.Compiled_Machines` | max performance; transition written as code | a `Machine` is one enum; dispatch dissolves to branches at `-O2/-O3` |
 
 The core operation is `Process_Event` (matching Boost.SML's `process_event`).
 
@@ -123,10 +124,37 @@ Table : constant Transition_Table :=
 ```
 
 A row is just a `Transition`, so the table is an ordinary array aggregate fed to
-the usual `Make` — it stays in the SPARK subset and builds on GNAT 14+. Costs: a
+the usual `Make` — it stays in the SPARK subset and needs only GNAT 14+ (the
+project itself builds with the current toolchain, GNAT 15.2). Costs: a
 wrapper constant per event (its name must differ from the `Event_Kind` literal,
 hence the `E_*` prefix), and `>=` rather than SML's `=` for the target. See
 `example/hello_world_dsl.adb` versus the plain-table `example/hello_world.adb`.
+
+### Compiled layer (dissolved dispatch)
+
+When you need Boost.SML-style codegen, `Sml_Ada.Compiled_Machines` takes the
+transition as a `Step` procedure — guards are `if`s, actions are inline
+statements, the next state is an assignment:
+
+```ada
+procedure Step (Current : in out State; Ctx : in out Context; Evt : Event) is
+begin
+   case Current is
+      when Established =>
+         if Evt.Kind = Release then Send_Fin; Current := Fin_Wait_1; end if;
+      --  ...
+   end case;
+end Step;
+
+package SM is new Sml_Ada.Compiled_Machines (State, Event, Context, Step);
+M : Machine := Make (Established);
+```
+
+`Process_Event` just calls `Step`, which GNAT inlines at `-O2/-O3` to a branch
+sequence — no transition table, no scan, no indirect calls, and a `Machine` is
+one enum. (Checked in the generated assembly: the dispatch becomes compares + a
+jump, with zero `call`/`loop`.) The trade is you give up the at-a-glance table.
+See `example/hello_world_compiled.adb`.
 
 ### Formal verification (SPARK)
 
