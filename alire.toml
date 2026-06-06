@@ -11,6 +11,9 @@ tags = []
 [[depends-on]]
 aunit = "^26.0.0"
 
+[build-switches]
+"*".ada_version = "Ada2022"
+
 #  `alr test` builds the AUnit runner and executes it; the runner exits
 #  non-zero on any failing assertion so CI fails loudly.
 [[actions]]
