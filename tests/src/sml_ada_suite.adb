@@ -1,6 +1,7 @@
 with AUnit.Test_Cases;
 
 with Sml_Ada_Tests;
+with Sml_Ada_Machines_Tests;
 
 package body Sml_Ada_Suite is
 
@@ -10,6 +11,9 @@ package body Sml_Ada_Suite is
    begin
       AUnit.Test_Suites.Add_Test
         (Result, AUnit.Test_Cases.Test_Case_Access'(new Sml_Ada_Tests.Test));
+      AUnit.Test_Suites.Add_Test
+        (Result,
+         AUnit.Test_Cases.Test_Case_Access'(new Sml_Ada_Machines_Tests.Test));
       return Result;
    end Suite;
 
