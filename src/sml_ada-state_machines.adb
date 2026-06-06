@@ -1,6 +1,9 @@
-package body Sml_Ada.State_Machines is
+package body Sml_Ada.State_Machines
+  with SPARK_Mode
+is
 
-   function Make return Machine is (Current => Initial);
+   function Make return Machine
+   is (Current => Initial);
 
    procedure Process_Event (M : in out Machine; On : Event) is
    begin
