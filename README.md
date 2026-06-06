@@ -190,6 +190,13 @@ The emitted `Process_Event` is a baked `case` (no scan) that calls your existing
 dissolves to branches at `-O2/-O3`. The Graphviz diagram is generated from the
 very same table, so code and picture can't drift.
 
+The generator only consumes the `Transition_Table` (plus `Initial` for the
+diagram); how you *build* that table is up to you. `tools/` carries two demos of
+the same TCP-teardown machine: `tcp_*` defines the table inline, while `hw_*`
+defines it with the operator DSL (`From + Event (Guard) / Action >= To`) and
+feeds the resulting table to the same generator — DSL and codegen compose
+because a DSL row is just a `Transition`.
+
 ### Formal verification (SPARK)
 
 The whole engine is written in the SPARK subset. `proof/` instantiates Layer 0

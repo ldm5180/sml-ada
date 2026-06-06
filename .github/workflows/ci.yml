@@ -106,13 +106,17 @@ jobs:
           alr --non-interactive build
           alr exec -- gprbuild -p -P tools/tools.gpr
 
-      - name: Run the generated machine
-        run: tools/bin/check
+      - name: Run the generated machines
+        # tcp_* (table defined inline) and hw_* (table defined with the DSL).
+        run: |
+          tools/bin/check
+          tools/bin/run_hw
 
       - name: Regenerate and fail on drift
-        # If the table changed without re-running the generator, the committed
+        # If a table changed without re-running its generator, the committed
         # generated sources differ from a fresh run and this fails.
         run: |
-          (cd tools && bin/gen)
+          (cd tools && bin/gen && bin/gen_hw)
           git diff --exit-code -- \
-            tools/tcp_compiled.ads tools/tcp_compiled.adb tools/tcp.dot
+            tools/tcp_compiled.ads tools/tcp_compiled.adb tools/tcp.dot \
+            tools/hw_compiled.ads tools/hw_compiled.adb tools/hw.dot
