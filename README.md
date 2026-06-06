@@ -38,6 +38,7 @@ keeps the table pure data, lets the compiler inline the dispatch, makes the
 |------|-------------|-------|
 | `Sml_Ada.State_Machines` | plain state graph, no guards/actions | tiny; a `Machine` is one enum; **formally proven** (see `proof/`) |
 | `Sml_Ada.Machines` | guards, actions, payload-carrying events | the layer shown above |
+| `Sml_Ada.Machines.Indexed` | same table as `Machines`, O(1) dispatch | precomputed `(State, Event_Kind)` lookup; one transition per cell |
 | `Sml_Ada.Compiled_Machines` | max performance; transition written as code | a `Machine` is one enum; dispatch dissolves to branches at `-O2/-O3` |
 
 The core operation is `Process_Event` (matching Boost.SML's `process_event`).
@@ -156,6 +157,20 @@ one enum. (Checked in the generated assembly: the dispatch becomes compares + a
 jump, with zero `call`/`loop`.) The trade is you give up the at-a-glance table.
 See `example/hello_world_compiled.adb`.
 
+### O(1) dispatch (indexed)
+
+`Sml_Ada.Machines.Indexed` takes the *same* table but has `Make` precompute a
+`(State, Event_Kind) -> row` lookup, so `Process_Event` is one indexed read
+rather than an O(N) scan. Instantiate it on your `Machines` instance:
+
+```ada
+package SMI is new SM.Indexed;
+M : SMI.Machine := SMI.Make (Table, Initial => Established);
+```
+
+It requires at most one transition per `(State, Event_Kind)` cell (`Make` raises
+`Duplicate_Transition` otherwise). Keeps the readable table and stays in SPARK.
+
 ### Generating the compiled form (and a diagram)
 
 You don't have to hand-write the compiled machine. `Sml_Ada.Machines.Codegen`
@@ -207,5 +222,5 @@ docs/     hello_world.dot/.svg (state diagram)
 
 ## Requirements
 
-GNAT + `gprbuild` (via Alire). The test suite needs `aunit`; the proofs need
+GNAT + `gprbuild` (via Alire); the crate compiles as **Ada 2022**. The test suite needs `aunit`; the proofs need
 `gnatprove`; the diagram is generated with Graphviz (`dot`).
