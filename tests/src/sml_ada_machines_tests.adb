@@ -43,7 +43,7 @@ package body Sml_Ada_Machines_Tests is
             null;
 
          when Add     =>
-            C.Sum := C.Sum + E.N;
+            C.Sum := @ + E.N;
       end case;
    end Execute;
 
