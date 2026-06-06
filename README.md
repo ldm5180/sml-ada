@@ -103,6 +103,31 @@ send: fin
 final: CLOSED
 ```
 
+### Optional operator DSL
+
+For a Boost.SML-style reading, instantiate the `Sml_Ada.Machines.Dsl` child and
+write each row as `From + Event (Guard) / Action >= To`:
+
+```ada
+package D is new SM.Dsl (Always => Always, Nothing => Nothing);
+use SM, D;
+
+Release : constant Ev := (Kind => E_Release);   --  one wrapper per event
+--  Ack, Fin, Timeout : likewise
+
+Table : constant Transition_Table :=
+  [Established + Release            / Send_Fin >= Fin_Wait_1,
+   Fin_Wait_1  + Ack (Is_Valid)               >= Fin_Wait_2,
+   Fin_Wait_2  + Fin (Is_Valid)     / Send_Ack >= Timed_Wait,
+   Timed_Wait  + Timeout                       >= Closed];
+```
+
+A row is just a `Transition`, so the table is an ordinary array aggregate fed to
+the usual `Make` — it stays in the SPARK subset and builds on GNAT 14+. Costs: a
+wrapper constant per event (its name must differ from the `Event_Kind` literal,
+hence the `E_*` prefix), and `>=` rather than SML's `=` for the target. See
+`example/hello_world_dsl.adb` versus the plain-table `example/hello_world.adb`.
+
 ### Formal verification (SPARK)
 
 The whole engine is written in the SPARK subset. `proof/` instantiates Layer 0
