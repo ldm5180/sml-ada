@@ -60,10 +60,12 @@ package body Sml_Ada_Machines_Tests is
         Execute     => Execute);
    use M;
 
+   --!format off
    Table : constant Transition_Table :=
-     [(Idle, Go, Always, Nothing, Busy),
-      (Busy, Step, Below_Cap, Add, Busy),
-      (Busy, Stop, Always, Nothing, Done)];
+     [(Idle, Go,   Always,    Nothing, Busy),
+      (Busy, Step, Below_Cap, Add,     Busy),
+      (Busy, Stop, Always,    Nothing, Done)];
+   --!format on
 
    --  A second instance with tracing on, capturing into Log, exercises
    --  Process_Event's logging path.
@@ -88,10 +90,12 @@ package body Sml_Ada_Machines_Tests is
         Debug       => True,
         Trace       => Capture);
 
+   --!format off
    Dbg_Table : constant M_Dbg.Transition_Table :=
-     [(Idle, Go, Always, Nothing, Busy),
-      (Busy, Step, Below_Cap, Add, Busy),
-      (Busy, Stop, Always, Nothing, Done)];
+     [(Idle, Go,   Always,    Nothing, Busy),
+      (Busy, Step, Below_Cap, Add,     Busy),
+      (Busy, Stop, Always,    Nothing, Done)];
+   --!format on
 
    procedure Test_Guarded_Accumulation
      (T : in out AUnit.Test_Cases.Test_Case'Class)
@@ -173,16 +177,18 @@ package body Sml_Ada_Machines_Tests is
      (T : in out AUnit.Test_Cases.Test_Case'Class)
    is
       pragma Unreferenced (T);
+      --!format off
       Full : constant Transition_Table :=
-        [(Idle, Go, Always, Nothing, Busy),
+        [(Idle, Go,   Always, Nothing, Busy),
          (Idle, Step, Always, Nothing, Idle),
          (Idle, Stop, Always, Nothing, Idle),
-         (Busy, Go, Always, Nothing, Busy),
+         (Busy, Go,   Always, Nothing, Busy),
          (Busy, Step, Always, Nothing, Busy),
          (Busy, Stop, Always, Nothing, Done),
-         (Done, Go, Always, Nothing, Done),
+         (Done, Go,   Always, Nothing, Done),
          (Done, Step, Always, Nothing, Done),
          (Done, Stop, Always, Nothing, Done)];
+      --!format on
       Mac  : Machine := Make (Full, Initial => Idle, Complete => Total);
       C    : Ctx_T;
    begin
