@@ -6,19 +6,17 @@ generic
    type Event is (<>);
    Initial : State;
    with function Next (From : State; On : Event) return State;
-package Sml_Ada.State_Machines
-  with Preelaborate
-is
+package Sml_Ada.State_Machines with Preelaborate, SPARK_Mode is
 
    type Machine is private;
 
    function Make return Machine
-     with Post => State_Of (Make'Result) = Initial;
+   with Post => State_Of (Make'Result) = Initial;
 
    function State_Of (M : Machine) return State;
 
    procedure Process_Event (M : in out Machine; On : Event)
-     with Post => State_Of (M) = Next (State_Of (M)'Old, On);
+   with Post => State_Of (M) = Next (State_Of (M)'Old, On);
 
 private
 
@@ -26,6 +24,7 @@ private
       Current : State := Initial;
    end record;
 
-   function State_Of (M : Machine) return State is (M.Current);
+   function State_Of (M : Machine) return State
+   is (M.Current);
 
 end Sml_Ada.State_Machines;
