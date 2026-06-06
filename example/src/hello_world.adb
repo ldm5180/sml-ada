@@ -87,14 +87,22 @@ procedure Hello_World is
         Execute     => Execute);
    use SM;
 
-   --  8. Spell out the machine as a table: one transition per row, columns
-   --     lined up so the whole protocol reads at a glance.
-   --     From          On       Guard     Action     To
+   --  8. Spell out the machine as a table: one transition per row.  Wrapped
+   --     in "--!format off/on" so gnatformat leaves the hand-aligned columns
+   --     alone.  Read each row in Boost.SML / UML notation:
+   --
+   --         From  + On  [ Guard ]  / Action  = To
+   --
+   --     (the initial state is SML's *, given to Make; a state with no
+   --     outgoing row is terminal, SML's X).
+   --!format off
+   --     From         On       Guard     Action    To
    Table : constant Transition_Table :=
-     [(Established, Release, Always, Send_Fin, Fin_Wait_1),
-      (Fin_Wait_1, Ack, Is_Valid, Nothing, Fin_Wait_2),
-      (Fin_Wait_2, Fin, Is_Valid, Send_Ack, Timed_Wait),
-      (Timed_Wait, Timeout, Always, Nothing, Closed)];
+     [(Established, Release, Always,   Send_Fin, Fin_Wait_1),
+      (Fin_Wait_1,  Ack,     Is_Valid, Nothing,  Fin_Wait_2),
+      (Fin_Wait_2,  Fin,     Is_Valid, Send_Ack, Timed_Wait),
+      (Timed_Wait,  Timeout, Always,   Nothing,  Closed)];
+   --!format on
 
    M   : Machine := Make (Table, Initial => Established);
    Ctx : Context := (null record);
