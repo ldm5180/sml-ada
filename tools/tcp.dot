@@ -1,0 +1,10 @@
+digraph tcp {
+   rankdir = LR;
+   node [shape = box, style = rounded];
+   __start [shape = point];
+   __start -> ESTABLISHED;
+   ESTABLISHED -> FIN_WAIT_1 [label="RELEASE [ALWAYS] / SEND_FIN"];
+   FIN_WAIT_1 -> FIN_WAIT_2 [label="ACK [IS_VALID] / NOTHING"];
+   FIN_WAIT_2 -> TIMED_WAIT [label="FIN [IS_VALID] / SEND_ACK"];
+   TIMED_WAIT -> CLOSED [label="TIMEOUT [ALWAYS] / NOTHING"];
+}
