@@ -5,9 +5,9 @@ is
    function Make
      (Table        : Transition_Table;
       Initial      : State;
-      Complete     : Completeness     := Partial;
+      Complete     : Completeness := Partial;
       On_Unhandled : Unhandled_Policy := Stay;
-      Default      : State            := State'First) return Machine is
+      Default      : State := State'First) return Machine is
    begin
       if Complete = Total then
          for S in State loop
@@ -21,10 +21,10 @@ is
       end if;
 
       return M : Machine (Count => Table'Length) do
-         M.Current      := Initial;
+         M.Current := Initial;
          M.On_Unhandled := On_Unhandled;
-         M.Default      := Default;
-         M.Table        := Table;
+         M.Default := Default;
+         M.Table := Table;
       end return;
    end Make;
 
@@ -33,21 +33,47 @@ is
    is
       K : constant Event_Kind := Kind_Of (Evt);
    begin
+      if Debug then
+         Trace ("event " & K'Image & " in state " & M.Current'Image);
+      end if;
+
       for T of M.Table loop
-         if T.From = M.Current and then T.On = K
-           and then Evaluate (T.Guard, Ctx, Evt)
-         then
-            Execute (T.Action, Ctx, Evt);
-            M.Current := T.To;
-            return;
+         if T.From = M.Current and then T.On = K then
+            declare
+               Pass : constant Boolean := Evaluate (T.Guard, Ctx, Evt);
+            begin
+               if Debug then
+                  Trace ("  guard " & T.Guard'Image & " => " & Pass'Image);
+               end if;
+
+               if Pass then
+                  if Debug then
+                     Trace
+                       ("  action "
+                        & T.Action'Image
+                        & "; "
+                        & M.Current'Image
+                        & " -> "
+                        & T.To'Image);
+                  end if;
+
+                  Execute (T.Action, Ctx, Evt);
+                  M.Current := T.To;
+                  return;
+               end if;
+            end;
          end if;
       end loop;
 
+      if Debug then
+         Trace ("  unhandled; policy " & M.On_Unhandled'Image);
+      end if;
+
       case M.On_Unhandled is
-         when Stay =>
+         when Stay          =>
             null;
 
-         when Raise_Error =>
+         when Raise_Error   =>
             raise Unhandled_Event with M.Current'Image & " on " & K'Image;
 
          when Go_To_Default =>
