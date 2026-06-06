@@ -156,6 +156,25 @@ one enum. (Checked in the generated assembly: the dispatch becomes compares + a
 jump, with zero `call`/`loop`.) The trade is you give up the at-a-glance table.
 See `example/hello_world_compiled.adb`.
 
+### Generating the compiled form (and a diagram)
+
+You don't have to hand-write the compiled machine. `Sml_Ada.Machines.Codegen`
+reads a transition table — the single source of truth — and emits it.
+Instantiate it on your `Machines` instance and drive it from a small generator
+program (see `tools/`):
+
+```ada
+package Cg is new My_Defs.SM.Codegen;
+Cg.Put_Compiled_Spec (Spec_File, Defs_Unit => "My_Defs", Unit => "My_Compiled");
+Cg.Put_Compiled_Body (Body_File, My_Defs.Table, "My_Defs", "My_Compiled");
+Cg.Put_Dot           (Dot_File,  My_Defs.Table, My_Defs.Initial, "my_machine");
+```
+
+The emitted `Process_Event` is a baked `case` (no scan) that calls your existing
+`Evaluate`/`Execute`, so the behaviour isn't duplicated and the dispatch
+dissolves to branches at `-O2/-O3`. The Graphviz diagram is generated from the
+very same table, so code and picture can't drift.
+
 ### Formal verification (SPARK)
 
 The whole engine is written in the SPARK subset. `proof/` instantiates Layer 0
