@@ -119,8 +119,8 @@ Release : constant Ev := (Kind => E_Release);   --  one wrapper per event
 
 Table : constant Transition_Table :=
   [Established + Release            / Send_Fin >= Fin_Wait_1,
-   Fin_Wait_1  + Ack (Is_Valid)               >= Fin_Wait_2,
-   Fin_Wait_2  + Fin (Is_Valid)     / Send_Ack >= Timed_Wait,
+   Fin_Wait_1  + Ack     (Is_Valid)            >= Fin_Wait_2,
+   Fin_Wait_2  + Fin     (Is_Valid) / Send_Ack >= Timed_Wait,
    Timed_Wait  + Timeout                       >= Closed];
 ```
 
