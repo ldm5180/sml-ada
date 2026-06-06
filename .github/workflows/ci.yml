@@ -91,3 +91,28 @@ jobs:
           files=$(find src tests/src proof/src example/src example/cfg \( -name '*.ads' -o -name '*.adb' \))
           echo "Checking:"; echo "$files"
           gnatformat --no-project --check $files
+
+  codegen:
+    name: Codegen drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Alire + GNAT toolchain
+        uses: alire-project/setup-alire@v6
+
+      - name: Build library, generator and the generated machine
+        run: |
+          alr --non-interactive build
+          alr exec -- gprbuild -p -P tools/tools.gpr
+
+      - name: Run the generated machine
+        run: tools/bin/check
+
+      - name: Regenerate and fail on drift
+        # If the table changed without re-running the generator, the committed
+        # generated sources differ from a fresh run and this fails.
+        run: |
+          (cd tools && bin/gen)
+          git diff --exit-code -- \
+            tools/tcp_compiled.ads tools/tcp_compiled.adb tools/tcp.dot
