@@ -1,3 +1,4 @@
+with Ada.Strings.Unbounded;
 with AUnit.Assertions; use AUnit.Assertions;
 
 with Sml_Ada.Machines;
@@ -27,10 +28,11 @@ package body Sml_Ada_Machines_Tests is
    type G_Kind is (Always, Below_Cap);
    type A_Kind is (Nothing, Add);
 
-   function Kind_Of (E : Evt) return Ev is (E.Kind);
+   function Kind_Of (E : Evt) return Ev
+   is (E.Kind);
 
-   function Evaluate (G : G_Kind; C : Ctx_T; E : Evt) return Boolean is
-     (case G is
+   function Evaluate (G : G_Kind; C : Ctx_T; E : Evt) return Boolean
+   is (case G is
          when Always    => True,
          when Below_Cap => C.Sum + E.N <= C.Cap);
 
@@ -40,24 +42,53 @@ package body Sml_Ada_Machines_Tests is
          when Nothing =>
             null;
 
-         when Add =>
+         when Add     =>
             C.Sum := C.Sum + E.N;
       end case;
    end Execute;
 
-   package M is new Sml_Ada.Machines
-     (State       => St,
-      Event_Kind  => Ev,
-      Event       => Evt,
-      Context     => Ctx_T,
-      Guard_Kind  => G_Kind,
-      Action_Kind => A_Kind,
-      Kind_Of     => Kind_Of,
-      Evaluate    => Evaluate,
-      Execute     => Execute);
+   package M is new
+     Sml_Ada.Machines
+       (State       => St,
+        Event_Kind  => Ev,
+        Event       => Evt,
+        Context     => Ctx_T,
+        Guard_Kind  => G_Kind,
+        Action_Kind => A_Kind,
+        Kind_Of     => Kind_Of,
+        Evaluate    => Evaluate,
+        Execute     => Execute);
    use M;
 
    Table : constant Transition_Table :=
+     [(Idle, Go, Always, Nothing, Busy),
+      (Busy, Step, Below_Cap, Add, Busy),
+      (Busy, Stop, Always, Nothing, Done)];
+
+   --  A second instance with tracing on, capturing into Log, exercises
+   --  Process_Event's logging path.
+   Log : Ada.Strings.Unbounded.Unbounded_String;
+
+   procedure Capture (Message : String) is
+   begin
+      Ada.Strings.Unbounded.Append (Log, Message & ASCII.LF);
+   end Capture;
+
+   package M_Dbg is new
+     Sml_Ada.Machines
+       (State       => St,
+        Event_Kind  => Ev,
+        Event       => Evt,
+        Context     => Ctx_T,
+        Guard_Kind  => G_Kind,
+        Action_Kind => A_Kind,
+        Kind_Of     => Kind_Of,
+        Evaluate    => Evaluate,
+        Execute     => Execute,
+        Debug       => True,
+        Trace       => Capture);
+
+   Dbg_Table : constant M_Dbg.Transition_Table :=
      [(Idle, Go, Always, Nothing, Busy),
       (Busy, Step, Below_Cap, Add, Busy),
       (Busy, Stop, Always, Nothing, Done)];
@@ -94,7 +125,8 @@ package body Sml_Ada_Machines_Tests is
    procedure Test_Unhandled_Raise (T : in out AUnit.Test_Cases.Test_Case'Class)
    is
       pragma Unreferenced (T);
-      Mac : Machine := Make (Table, Initial => Idle, On_Unhandled => Raise_Error);
+      Mac : Machine :=
+        Make (Table, Initial => Idle, On_Unhandled => Raise_Error);
       C   : Ctx_T;
    begin
       Process_Event (Mac, C, (Kind => Stop));
@@ -110,9 +142,11 @@ package body Sml_Ada_Machines_Tests is
       pragma Unreferenced (T);
       Mac : Machine :=
         Make
-          (Table, Initial => Busy, On_Unhandled => Go_To_Default,
-           Default => Idle);
-      C : Ctx_T;
+          (Table,
+           Initial      => Busy,
+           On_Unhandled => Go_To_Default,
+           Default      => Idle);
+      C   : Ctx_T;
    begin
       Process_Event (Mac, C, (Kind => Go));
       Assert (State_Of (Mac) = Idle, "unhandled event goes to default state");
@@ -149,32 +183,61 @@ package body Sml_Ada_Machines_Tests is
          (Done, Go, Always, Nothing, Done),
          (Done, Step, Always, Nothing, Done),
          (Done, Stop, Always, Nothing, Done)];
-      Mac : Machine := Make (Full, Initial => Idle, Complete => Total);
-      C   : Ctx_T;
+      Mac  : Machine := Make (Full, Initial => Idle, Complete => Total);
+      C    : Ctx_T;
    begin
       Process_Event (Mac, C, (Kind => Go));
       Assert (State_Of (Mac) = Busy, "complete table is accepted and runs");
    end Test_Complete_Table_Accepted;
 
+   procedure Test_Logging (T : in out AUnit.Test_Cases.Test_Case'Class) is
+      pragma Unreferenced (T);
+      use Ada.Strings.Unbounded;
+      Mac : M_Dbg.Machine := M_Dbg.Make (Dbg_Table, Initial => Idle);
+      C   : Ctx_T;
+      function Logged (S : String) return Boolean
+      is (Index (Log, S) > 0);
+   begin
+      Log := Null_Unbounded_String;
+      M_Dbg.Process_Event (Mac, C, (Kind => Go));
+      Assert (Logged ("GO"), "log records the event kind");
+      Assert (Logged ("ALWAYS"), "log records the guard tried");
+      Assert (Logged ("TRUE"), "log records the guard result");
+      Assert (Logged ("NOTHING"), "log records the action");
+      Assert
+        (Logged ("IDLE") and then Logged ("BUSY"),
+         "log records the state transition");
+   end Test_Logging;
+
    overriding
    procedure Register_Tests (T : in out Test) is
    begin
       Register_Routine
-        (T, Test_Guarded_Accumulation'Access,
+        (T,
+         Test_Guarded_Accumulation'Access,
          "Guards gate transitions; actions accumulate payload");
       Register_Routine
         (T, Test_Unhandled_Stay'Access, "Unhandled event: Stay policy");
       Register_Routine
-        (T, Test_Unhandled_Raise'Access, "Unhandled event: Raise_Error policy");
+        (T,
+         Test_Unhandled_Raise'Access,
+         "Unhandled event: Raise_Error policy");
       Register_Routine
-        (T, Test_Unhandled_Default'Access,
+        (T,
+         Test_Unhandled_Default'Access,
          "Unhandled event: Go_To_Default policy");
       Register_Routine
-        (T, Test_Incomplete_Table_Detected'Access,
+        (T,
+         Test_Incomplete_Table_Detected'Access,
          "Total completeness rejects a sparse table");
       Register_Routine
-        (T, Test_Complete_Table_Accepted'Access,
+        (T,
+         Test_Complete_Table_Accepted'Access,
          "Total completeness accepts a full table");
+      Register_Routine
+        (T,
+         Test_Logging'Access,
+         "Tracing records event, guard, action and transition");
    end Register_Tests;
 
    overriding

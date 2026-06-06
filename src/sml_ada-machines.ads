@@ -11,12 +11,14 @@ generic
    type Guard_Kind is (<>);
    type Action_Kind is (<>);
    with function Kind_Of (E : Event) return Event_Kind;
-   with function Evaluate
-     (G : Guard_Kind; Ctx : Context; Evt : Event) return Boolean;
+   with
+     function Evaluate
+       (G : Guard_Kind; Ctx : Context; Evt : Event) return Boolean;
    with procedure Execute (A : Action_Kind; Ctx : in out Context; Evt : Event);
-package Sml_Ada.Machines
-  with SPARK_Mode
-is
+   Debug : Boolean := False;
+   --  When False every Trace call below is statically eliminated.
+   with procedure Trace (Message : String) is null;
+package Sml_Ada.Machines with SPARK_Mode is
 
    type Transition is record
       From   : State;
@@ -41,10 +43,10 @@ is
    function Make
      (Table        : Transition_Table;
       Initial      : State;
-      Complete     : Completeness     := Partial;
+      Complete     : Completeness := Partial;
       On_Unhandled : Unhandled_Policy := Stay;
-      Default      : State            := State'First) return Machine
-     with Post => State_Of (Make'Result) = Initial;
+      Default      : State := State'First) return Machine
+   with Post => State_Of (Make'Result) = Initial;
 
    procedure Process_Event
      (M : in out Machine; Ctx : in out Context; Evt : Event);
@@ -58,6 +60,7 @@ private
       Table        : Transition_Table (1 .. Count);
    end record;
 
-   function State_Of (M : Machine) return State is (M.Current);
+   function State_Of (M : Machine) return State
+   is (M.Current);
 
 end Sml_Ada.Machines;
