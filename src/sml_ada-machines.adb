@@ -32,9 +32,23 @@ is
      (M : in out Machine; Ctx : in out Context; Evt : Event)
    is
       K : constant Event_Kind := Kind_Of (Evt);
+
+      --  'Image of a composite is multi-line; flatten it for one-line traces.
+      function One_Line (S : String) return String is
+         R : String (S'Range) := S;
+      begin
+         for I in R'Range loop
+            if R (I) = ASCII.LF then
+               R (I) := ' ';
+            end if;
+         end loop;
+         return R;
+      end One_Line;
+
    begin
       if Debug then
-         Trace ("event " & K'Image & " in state " & M.Current'Image);
+         Trace
+           ("event " & One_Line (Evt'Image) & " in state " & M.Current'Image);
       end if;
 
       for T of M.Table loop
@@ -59,6 +73,11 @@ is
 
                   Execute (T.Action, Ctx, Evt);
                   M.Current := T.To;
+
+                  if Debug then
+                     Trace ("  context " & One_Line (Ctx'Image));
+                  end if;
+
                   return;
                end if;
             end;
