@@ -1,0 +1,18 @@
+name = "sml_ada"
+description = "Declarative, low-overhead state machines (Boost.SML-inspired)"
+version = "0.1.0-dev"
+
+authors = ["lenny"]
+maintainers = ["lenny <ldm5180@gmail.com>"]
+licenses = "MIT OR Apache-2.0 WITH LLVM-exception"
+website = ""
+tags = []
+
+[[depends-on]]
+aunit = "^26.0.0"
+
+#  `alr test` builds the AUnit runner and executes it; the runner exits
+#  non-zero on any failing assertion so CI fails loudly.
+[[actions]]
+type = "test"
+command = ["sh", "-c", "alr exec -- gprbuild -p -P tests/test_sml_ada.gpr && tests/bin/test_runner"]

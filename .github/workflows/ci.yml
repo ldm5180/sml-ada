@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+# Cancel superseded runs on the same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Alire + GNAT toolchain
+        uses: alire-project/setup-alire@v6
+        # Defaults: alr 2.1.1, toolchain "gnat_native gprbuild".
+
+      - name: Build the library (validation profile)
+        # The `validation` profile adds -gnatwe (warnings are errors),
+        # -gnata (assertions/contracts) and -gnato (overflow checks) on top
+        # of the default warning + style set, so CI fails on any warning.
+        # The profile is persisted in config/ and inherited by the test step.
+        run: alr --non-interactive build --validation
+
+      - name: Run the test suite
+        # `alr test` builds tests/test_sml_ada.gpr and runs the AUnit
+        # runner, which exits non-zero on any failed assertion.
+        run: alr --non-interactive test
+
+  format:
+    name: Formatting (gnatformat --check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Alire + GNAT toolchain
+        uses: alire-project/setup-alire@v6
+
+      - name: Install gnatformat
+        run: |
+          alr --non-interactive install --prefix="$HOME/.alire" gnatformat_bin
+          echo "$HOME/.alire/bin" >> "$GITHUB_PATH"
+
+      - name: Check formatting
+        run: |
+          files=$(find src tests/src \( -name '*.ads' -o -name '*.adb' \))
+          echo "Checking:"; echo "$files"
+          gnatformat --no-project --check $files

@@ -1,0 +1,25 @@
+with "aunit";
+with "../sml_ada.gpr";
+
+--  Test runner project for sml_ada.  Built and executed by `alr test`
+--  (see the [[actions]] entry in alire.toml).  It withs the library under
+--  test plus the AUnit framework that Alire provides as a dependency.
+project Test_Sml_Ada is
+
+   for Source_Dirs use ("src");
+   for Object_Dir use "obj";
+   for Exec_Dir use "bin";
+   for Main use ("test_runner.adb");
+
+   package Compiler is
+      for Default_Switches ("Ada") use
+        ("-g", "-gnata", "-gnatwa", "-gnatwe", "-gnat2022");
+      --  -gnata keeps the library's pre/postconditions enabled while testing;
+      --  -gnatwe holds the test code itself to warnings-as-errors.
+   end Compiler;
+
+   package Binder is
+      for Switches ("Ada") use ("-Es");  --  Symbolic traceback.
+   end Binder;
+
+end Test_Sml_Ada;
