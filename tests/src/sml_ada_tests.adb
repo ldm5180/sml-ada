@@ -4,11 +4,9 @@ with Sml_Ada.State_Machines;
 
 package body Sml_Ada_Tests is
 
-   --  Register_Routine lives in the nested package AUnit.Test_Cases.
-   --  Registration (AUnit.Test_Cases is withed by the spec).
+   --  Register_Routine is in the nested package
+   --  AUnit.Test_Cases.Registration (use it, do not with it).
    use AUnit.Test_Cases.Registration;
-
-   --  A classic turnstile machine, reused across the routines below.
 
    type Turnstile_State is (Locked, Unlocked);
    type Turnstile_Event is (Coin, Push);
@@ -25,10 +23,7 @@ package body Sml_Ada_Tests is
         Event   => Turnstile_Event,
         Initial => Locked,
         Next    => Next);
-
    use Turnstile;
-
-   --  Test routines ---------------------------------------------------------
 
    procedure Test_Initial_State (T : in out AUnit.Test_Cases.Test_Case'Class)
    is
@@ -42,7 +37,7 @@ package body Sml_Ada_Tests is
       pragma Unreferenced (T);
       M : Machine := Make;
    begin
-      Fire (M, Coin);
+      Process_Event (M, Coin);
       Assert (State_Of (M) = Unlocked, "Coin should unlock the turnstile");
    end Test_Coin_Unlocks;
 
@@ -50,8 +45,8 @@ package body Sml_Ada_Tests is
       pragma Unreferenced (T);
       M : Machine := Make;
    begin
-      Fire (M, Coin);
-      Fire (M, Push);
+      Process_Event (M, Coin);
+      Process_Event (M, Push);
       Assert (State_Of (M) = Locked, "Push after Coin should re-lock");
    end Test_Push_Locks;
 
@@ -61,14 +56,12 @@ package body Sml_Ada_Tests is
       pragma Unreferenced (T);
       M : Machine := Make;
    begin
-      Fire (M, Push);
+      Process_Event (M, Push);
       Assert (State_Of (M) = Locked, "Push while Locked is a no-op");
-      Fire (M, Coin);
-      Fire (M, Coin);
+      Process_Event (M, Coin);
+      Process_Event (M, Coin);
       Assert (State_Of (M) = Unlocked, "a second Coin is a no-op");
    end Test_Irrelevant_Events_Ignored;
-
-   --  Registration ----------------------------------------------------------
 
    overriding
    procedure Register_Tests (T : in out Test) is
