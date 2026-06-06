@@ -38,7 +38,7 @@ package body Sml_Ada_Compiled_Tests is
             case E.Kind is
                when Chunk  =>
                   if C.Sum + E.N <= C.Cap then
-                     C.Sum := C.Sum + E.N;
+                     C.Sum := @ + E.N;
                   end if;
 
                when Stop   =>
