@@ -26,13 +26,48 @@ jobs:
         # The `validation` profile adds -gnatwe (warnings are errors),
         # -gnata (assertions/contracts) and -gnato (overflow checks) on top
         # of the default warning + style set, so CI fails on any warning.
-        # The profile is persisted in config/ and inherited by the test step.
+        # The profile is persisted in config/ and inherited by later steps.
         run: alr --non-interactive build --validation
 
       - name: Run the test suite
-        # `alr test` builds tests/test_sml_ada.gpr and runs the AUnit
-        # runner, which exits non-zero on any failed assertion.
+        # `alr test` builds tests/test_sml_ada.gpr and runs the AUnit runner,
+        # which exits non-zero on any failed assertion.  The suite instantiates
+        # the machine both with and without tracing, so both compile here too.
         run: alr --non-interactive test
+
+      - name: Build & run the example without tracing
+        run: |
+          alr exec -- gprbuild -p -XTRACE=off -P example/example.gpr
+          ./example/bin/hello_world
+
+      - name: Build & run the example with tracing
+        run: |
+          rm -rf example/obj example/bin
+          alr exec -- gprbuild -p -XTRACE=on -P example/example.gpr
+          ./example/bin/hello_world
+
+  proof:
+    name: SPARK proof
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Alire + GNAT toolchain
+        uses: alire-project/setup-alire@v6
+
+      - name: Build
+        # Populates the shared dependency cache so the proof project's tree
+        # (which withs aunit via the generated config) resolves for gnatprove.
+        run: alr --non-interactive build
+
+      - name: Install gnatprove
+        run: |
+          alr --non-interactive install --prefix="$HOME/.alire" gnatprove
+          echo "$HOME/.alire/bin" >> "$GITHUB_PATH"
+
+      - name: Prove
+        # --checks-as-errors=on fails the job if any check is unproved.
+        run: alr exec -- gnatprove -P proof/proof.gpr -j0 --level=2 --checks-as-errors=on
 
   format:
     name: Formatting (gnatformat --check)
@@ -49,7 +84,8 @@ jobs:
           echo "$HOME/.alire/bin" >> "$GITHUB_PATH"
 
       - name: Check formatting
+        # Tables are wrapped in --!format off/on, so their alignment is kept.
         run: |
-          files=$(find src tests/src \( -name '*.ads' -o -name '*.adb' \))
+          files=$(find src tests/src proof/src example/src example/cfg \( -name '*.ads' -o -name '*.adb' \))
           echo "Checking:"; echo "$files"
           gnatformat --no-project --check $files
