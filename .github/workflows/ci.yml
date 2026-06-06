@@ -35,10 +35,11 @@ jobs:
         # the machine both with and without tracing, so both compile here too.
         run: alr --non-interactive test
 
-      - name: Build & run the example without tracing
+      - name: Build & run the examples without tracing
         run: |
           alr exec -- gprbuild -p -XTRACE=off -P example/example.gpr
           ./example/bin/hello_world
+          ./example/bin/hello_world_dsl
 
       - name: Build & run the example with tracing
         run: |
