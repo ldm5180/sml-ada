@@ -6,6 +6,7 @@
 with Ada.Text_IO; use Ada.Text_IO;
 
 with Sml_Ada.Machines;
+with Trace_Config;
 
 procedure Hello_World is
 
@@ -73,7 +74,14 @@ procedure Hello_World is
       end case;
    end Execute;
 
-   --  7. Instantiate the engine with your types and dispatchers.
+   --  7. Instantiate the engine.  Wiring Debug => Trace_Config.Enabled (set by
+   --     the example's TRACE scenario) lets CI build this both with and
+   --     without tracing; when off, the trace calls are statically removed.
+   procedure Put_Trace (Message : String) is
+   begin
+      Put_Line ("[trace]" & Message);
+   end Put_Trace;
+
    package SM is new
      Sml_Ada.Machines
        (State       => State,
@@ -84,7 +92,9 @@ procedure Hello_World is
         Action_Kind => Action_Kind,
         Kind_Of     => Kind_Of,
         Evaluate    => Evaluate,
-        Execute     => Execute);
+        Execute     => Execute,
+        Debug       => Trace_Config.Enabled,
+        Trace       => Put_Trace);
    use SM;
 
    --  8. Spell out the machine as a table: one transition per row.  Wrapped
