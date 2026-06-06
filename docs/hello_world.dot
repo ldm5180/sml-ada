@@ -1,0 +1,17 @@
+// State diagram for example/hello_world.adb (Boost.SML TCP-teardown port).
+// Render: dot -Tsvg docs/hello_world.dot -o docs/hello_world.svg
+digraph hello_world {
+   rankdir = LR;
+   fontname = "Helvetica";
+   node [fontname = "Helvetica", shape = box, style = rounded];
+   edge [fontname = "Helvetica"];
+
+   __start [shape = point, width = 0.12];
+   Closed [style = "rounded,bold"];
+
+   __start    -> Established;
+   Established -> Fin_Wait_1 [label = "Release / Send_Fin"];
+   Fin_Wait_1 -> Fin_Wait_2 [label = "Ack [Is_Valid]"];
+   Fin_Wait_2 -> Timed_Wait [label = "Fin [Is_Valid] / Send_Ack"];
+   Timed_Wait -> Closed     [label = "Timeout"];
+}
