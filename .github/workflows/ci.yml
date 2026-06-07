@@ -11,12 +11,19 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Run JavaScript actions on Node 24 now (the default from 2026-06-16).  This
+# silences the Node 20 deprecation warnings, including those from the actions
+# that alire-project/setup-alire@v6 (the latest) pins internally
+# (actions/cache/restore, actions/setup-node), which we can't bump ourselves.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   build-and-test:
     name: Build & test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Alire + GNAT toolchain
         uses: alire-project/setup-alire@v6
@@ -50,7 +57,7 @@ jobs:
     name: SPARK proof
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Alire + GNAT toolchain
         uses: alire-project/setup-alire@v6
@@ -73,7 +80,7 @@ jobs:
     name: Formatting (gnatformat --check)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Alire + GNAT toolchain
         uses: alire-project/setup-alire@v6
@@ -94,7 +101,7 @@ jobs:
     name: Codegen example
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Alire + GNAT toolchain
         uses: alire-project/setup-alire@v6
