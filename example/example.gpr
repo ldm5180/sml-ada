@@ -1,4 +1,4 @@
-with "../sml_ada.gpr";
+with "../sml.gpr";
 
 project Example is
 

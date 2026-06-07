@@ -1,8 +1,8 @@
-with "../sml_ada.gpr";
+with "../sml.gpr";
 
 --  SPARK proof target.  Not built by `alr build`; analysed with
 --  `alr exec -- gnatprove -P proof/proof.gpr`.  It instantiates the engine and
---  its operators (Sml_Ada.Machines + Operators) for a concrete instance.
+--  its operators (Sml.Machines + Operators) for a concrete instance.
 project Proof is
 
    for Source_Dirs use ("src");

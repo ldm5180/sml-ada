@@ -1,4 +1,4 @@
-# SML/Ada
+# SML
 
 Declarative, low-overhead **state machines for Ada**, inspired by
 [boost-ext/sml](https://github.com/boost-ext/sml). The goal is to describe a
@@ -23,7 +23,7 @@ Table : constant Transition_Table :=
 
 You can't reproduce Boost.SML's `src + event[guard] / action = dst` operator DSL
 exactly in Ada (`=` must return `Boolean`, there is no user-definable `[]`, and
-operator symbols are a fixed set) — but `Sml_Ada.Machines.Operators` gets close
+operator symbols are a fixed set) — but `Sml.Machines.Operators` gets close
 with `+`, `(...)`, `/` and `>=`, because the *at-a-glance* quality of SML lives in the
 row layout, not the exact operators. States and events are enumeration types,
 transitions are a flat array (one row each), and guards and actions are **named**
@@ -31,17 +31,17 @@ rather than stored as subprogram pointers. Naming them keeps the table pure
 data, lets the compiler inline the dispatch, makes the `case` arms
 exhaustiveness-checked, and keeps the engine provable with SPARK.
 
-`Sml_Ada.Machines` is the engine; `Sml_Ada.Machines.Operators` is the opt-in
+`Sml.Machines` is the engine; `Sml.Machines.Operators` is the opt-in
 operator layer that produces the rows above. The core operation is
 `Process_Event` (matching Boost.SML's `process_event`).
 
 ## Operator notation
 
-Instantiate the `Sml_Ada.Machines.Operators` child on your `Machines` instance,
+Instantiate the `Sml.Machines.Operators` child on your `Machines` instance,
 naming the "always" guard and "do nothing" action used by rows that omit them:
 
 ```ada
-package SM is new Sml_Ada.Machines (...);
+package SM is new Sml.Machines (...);
 package Op is new SM.Operators (Always => Always, Nothing => Nothing);
 use SM, Op;
 
@@ -218,8 +218,8 @@ keeps their hand-aligned columns.
 ## Layout
 
 ```
-src/      sml_ada.ads, sml_ada-machines.{ads,adb}, sml_ada-machines-operators.ads
-tests/    AUnit suite (test_sml_ada.gpr)
+src/      sml.ads, sml-machines.{ads,adb}, sml-machines-operators.ads
+tests/    AUnit suite (test_sml.gpr)
 proof/    SPARK proof target (proof.gpr)
 example/  hello_world.adb + TRACE on/off config (example.gpr)
 example/generated/  hello_world.fsm spec + generate.adb + hand-written logic;

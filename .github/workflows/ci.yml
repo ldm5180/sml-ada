@@ -30,7 +30,7 @@ jobs:
         run: alr --non-interactive build --validation
 
       - name: Run the test suite
-        # `alr test` builds tests/test_sml_ada.gpr and runs the AUnit runner,
+        # `alr test` builds tests/test_sml.gpr and runs the AUnit runner,
         # which exits non-zero on any failed assertion.  The suite instantiates
         # the machine both with and without tracing, so both compile here too.
         run: alr --non-interactive test

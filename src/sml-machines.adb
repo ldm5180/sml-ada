@@ -1,4 +1,4 @@
-package body Sml_Ada.Machines
+package body Sml.Machines
   with SPARK_Mode
 is
 
@@ -87,4 +87,4 @@ is
       end case;
    end Process_Event;
 
-end Sml_Ada.Machines;
+end Sml.Machines;

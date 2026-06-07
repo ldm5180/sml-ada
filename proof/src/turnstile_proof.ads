@@ -2,12 +2,12 @@ pragma Ada_2022;
 
 --  A concrete instance so gnatprove has something to verify (it does not
 --  analyse uninstantiated generics).  It instantiates the engine and its
---  operators (Sml_Ada.Machines + Sml_Ada.Machines.Operators) for a turnstile
+--  operators (Sml.Machines + Sml.Machines.Operators) for a turnstile
 --  and proves the engine is free of run-time errors, plus that Make establishes
 --  the initial state (its Post chains through to Run's result).
 
-with Sml_Ada.Machines;
-with Sml_Ada.Machines.Operators;
+with Sml.Machines;
+with Sml.Machines.Operators;
 
 package Turnstile_Proof
   with SPARK_Mode
@@ -34,7 +34,7 @@ is
    is null;
 
    package SM is new
-     Sml_Ada.Machines
+     Sml.Machines
        (State       => State,
         Event_Kind  => Event_Kind,
         Event       => Event,

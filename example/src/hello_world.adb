@@ -1,15 +1,15 @@
 pragma Ada_2022;
 
 --  A TCP-teardown machine (Boost.SML's hello_world) built with the opt-in
---  operators (Sml_Ada.Machines.Operators) so each row reads close to Boost.SML:
+--  operators (Sml.Machines.Operators) so each row reads close to Boost.SML:
 --  From + Event (Guard) / Action >= To.
 --
 --  Read this top-to-bottom as a recipe for building your own machine.
 
 with Ada.Text_IO; use Ada.Text_IO;
 
-with Sml_Ada.Machines;
-with Sml_Ada.Machines.Operators;
+with Sml.Machines;
+with Sml.Machines.Operators;
 with Trace_Config;
 
 procedure Hello_World is
@@ -79,7 +79,7 @@ procedure Hello_World is
    end Put_Trace;
 
    package SM is new
-     Sml_Ada.Machines
+     Sml.Machines
        (State       => State,
         Event_Kind  => Event_Kind,
         Event       => Event,
