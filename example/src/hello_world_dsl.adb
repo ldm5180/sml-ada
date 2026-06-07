@@ -1,13 +1,16 @@
 pragma Ada_2022;
 
---  The same TCP-teardown machine as hello_world.adb, but built with the
---  opt-in operator DSL (Sml_Ada.Machines.Dsl) so each row reads close to
---  Boost.SML:  From + Event (Guard) / Action >= To.
+--  A TCP-teardown machine (Boost.SML's hello_world) built with the opt-in
+--  operator DSL (Sml_Ada.Machines.Dsl) so each row reads close to Boost.SML:
+--  From + Event (Guard) / Action >= To.
+--
+--  Read this top-to-bottom as a recipe for building your own machine.
 
 with Ada.Text_IO; use Ada.Text_IO;
 
 with Sml_Ada.Machines;
 with Sml_Ada.Machines.Dsl;
+with Trace_Config;
 
 procedure Hello_World_Dsl is
 
@@ -67,6 +70,14 @@ procedure Hello_World_Dsl is
       end case;
    end Execute;
 
+   --  Opt-in tracing.  Debug => Trace_Config.Enabled (set by the TRACE
+   --  scenario) lets CI build this both with and without tracing; when off,
+   --  the trace calls are statically removed, so tracing costs nothing.
+   procedure Put_Trace (Message : String) is
+   begin
+      Put_Line ("[trace]" & Message);
+   end Put_Trace;
+
    package SM is new
      Sml_Ada.Machines
        (State       => State,
@@ -77,7 +88,9 @@ procedure Hello_World_Dsl is
         Action_Kind => Action_Kind,
         Kind_Of     => Kind_Of,
         Evaluate    => Evaluate,
-        Execute     => Execute);
+        Execute     => Execute,
+        Debug       => Trace_Config.Enabled,
+        Trace       => Put_Trace);
 
    --  Opt in to the operator DSL, naming the "always" guard and "do nothing"
    --  action used by rows that omit them.
