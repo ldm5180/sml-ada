@@ -18,7 +18,7 @@ generic
    Debug : Boolean := False;
    --  When False every Trace call below is statically eliminated.
    with procedure Trace (Message : String) is null;
-package Sml_Ada.Machines with SPARK_Mode is
+package Sml.Machines with SPARK_Mode is
 
    type Transition is record
       From   : State;
@@ -64,4 +64,4 @@ private
    function State_Of (M : Machine) return State
    is (M.Current);
 
-end Sml_Ada.Machines;
+end Sml.Machines;

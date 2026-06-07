@@ -1,6 +1,6 @@
 with AUnit.Test_Cases;
 
-package Sml_Ada_Machines_Tests is
+package Sml_Machines_Tests is
 
    type Test is new AUnit.Test_Cases.Test_Case with null record;
 
@@ -10,4 +10,4 @@ package Sml_Ada_Machines_Tests is
    overriding
    function Name (T : Test) return AUnit.Message_String;
 
-end Sml_Ada_Machines_Tests;
+end Sml_Machines_Tests;

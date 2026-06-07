@@ -5,11 +5,11 @@ use type AUnit.Status;
 with AUnit.Reporter.Text;
 with AUnit.Run;
 
-with Sml_Ada_Suite;
+with Sml_Suite;
 
 procedure Test_Runner is
 
-   function Run is new AUnit.Run.Test_Runner_With_Status (Sml_Ada_Suite.Suite);
+   function Run is new AUnit.Run.Test_Runner_With_Status (Sml_Suite.Suite);
 
    Reporter : AUnit.Reporter.Text.Text_Reporter;
    Outcome  : AUnit.Status;

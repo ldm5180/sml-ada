@@ -1,7 +1,7 @@
 with AUnit.Test_Suites;
 
-package Sml_Ada_Suite is
+package Sml_Suite is
 
    function Suite return AUnit.Test_Suites.Access_Test_Suite;
 
-end Sml_Ada_Suite;
+end Sml_Suite;

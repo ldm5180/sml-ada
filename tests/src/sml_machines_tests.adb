@@ -1,9 +1,9 @@
 with Ada.Strings.Unbounded;
 with AUnit.Assertions; use AUnit.Assertions;
 
-with Sml_Ada.Machines;
+with Sml.Machines;
 
-package body Sml_Ada_Machines_Tests is
+package body Sml_Machines_Tests is
 
    use AUnit.Test_Cases.Registration;
 
@@ -48,7 +48,7 @@ package body Sml_Ada_Machines_Tests is
    end Execute;
 
    package M is new
-     Sml_Ada.Machines
+     Sml.Machines
        (State       => St,
         Event_Kind  => Ev,
         Event       => Evt,
@@ -77,7 +77,7 @@ package body Sml_Ada_Machines_Tests is
    end Capture;
 
    package M_Dbg is new
-     Sml_Ada.Machines
+     Sml.Machines
        (State       => St,
         Event_Kind  => Ev,
         Event       => Evt,
@@ -250,7 +250,7 @@ package body Sml_Ada_Machines_Tests is
    function Name (T : Test) return AUnit.Message_String is
       pragma Unreferenced (T);
    begin
-      return AUnit.Format ("Sml_Ada.Machines (guards, actions, payloads)");
+      return AUnit.Format ("Sml.Machines (guards, actions, payloads)");
    end Name;
 
-end Sml_Ada_Machines_Tests;
+end Sml_Machines_Tests;

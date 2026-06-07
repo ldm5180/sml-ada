@@ -1,4 +1,4 @@
-name = "sml_ada"
+name = "sml"
 description = "Declarative, low-overhead state machines (Boost.SML-inspired)"
 version = "0.1.0-dev"
 
@@ -18,4 +18,4 @@ aunit = "^26.0.0"
 #  non-zero on any failing assertion so CI fails loudly.
 [[actions]]
 type = "test"
-command = ["sh", "-c", "alr exec -- gprbuild -p -P tests/test_sml_ada.gpr && tests/bin/test_runner"]
+command = ["sh", "-c", "alr exec -- gprbuild -p -P tests/test_sml.gpr && tests/bin/test_runner"]
