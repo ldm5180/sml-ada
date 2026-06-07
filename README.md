@@ -193,8 +193,12 @@ alr exec -- gprbuild -P example/generated/generated.gpr run.adb
 ./example/generated/bin/run        # start: ESTABLISHED ... final: CLOSED
 ```
 
-You edit only `hello_world.fsm` (the spec) and `hello_world_logic.adb` (the
-behaviour); re-run step 1 whenever the spec changes.
+You edit `hello_world.fsm` (the spec) and the `hello_world_logic` package — its
+spec (`.ads`: the `Event` payloads, the `Context`, and the guard/action
+declarations) and body (`.adb`: their implementations). Ada requires a body's
+declaration to live in the same package, and that package also carries the
+payloads/`Context` the spec can't express — so the `.ads` is hand-written, not
+generated. Re-run step 1 whenever `hello_world.fsm` changes.
 
 ## Building, testing, proving, formatting
 
