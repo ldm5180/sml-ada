@@ -89,3 +89,26 @@ jobs:
           files=$(find src tests/src proof/src example/src example/cfg \( -name '*.ads' -o -name '*.adb' \))
           echo "Checking:"; echo "$files"
           gnatformat --no-project --check $files
+
+  codegen:
+    name: Codegen example
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Alire + GNAT toolchain
+        uses: alire-project/setup-alire@v6
+
+      - name: Build the library and the generator
+        # Generated sources are NOT committed, so build only the generator main
+        # first (its closure is just the definition + Codegen).
+        run: |
+          alr --non-interactive build
+          alr exec -- gprbuild -p -P example/generated/generated.gpr generate.adb
+
+      - name: Generate, then build & run the consumer
+        # Proves the generator runs, and that what it emits compiles and works.
+        run: |
+          (cd example/generated && bin/generate)
+          alr exec -- gprbuild -p -P example/generated/generated.gpr run.adb
+          ./example/generated/bin/run

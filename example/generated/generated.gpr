@@ -1,0 +1,18 @@
+with "../../sml_ada.gpr";
+
+--  Two-phase: build & run `generate` to emit the compiled machine + diagram,
+--  then build `run` (the consumer of the generated machine).  The generated
+--  sources are NOT committed (the point of the example is to produce them), so
+--  build `generate.adb` first, run it, then build `run.adb`.
+project Generated is
+
+   for Source_Dirs use (".");
+   for Object_Dir use "obj";
+   for Exec_Dir use "bin";
+   for Main use ("generate.adb", "run.adb");
+
+   package Compiler is
+      for Default_Switches ("Ada") use ("-g", "-gnatwa", "-gnat2022");
+   end Compiler;
+
+end Generated;
