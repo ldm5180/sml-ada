@@ -1,6 +1,6 @@
 --  The spec-driven generator.  Reads hello_world.fsm (text) and emits:
---    * hello_world_defs.ads      -- the State/Event_Kind/Guard_Kind/Action_Kind
---                                   enums, derived from the transitions
+--    * hello_world_defs.ads      -- the State/Event_Kind enums, derived from
+--                                   the transitions
 --    * hello_world_machine.ad{s,b} -- a self-contained machine whose
 --                                   Process_Event is a jump-table `case`
 --    * hello_world.dot           -- a Graphviz diagram
@@ -29,8 +29,6 @@ procedure Generate is
 
    States  : String_Vectors.Vector;
    Events  : String_Vectors.Vector;
-   Guards  : String_Vectors.Vector;
-   Actions : String_Vectors.Vector;
    Trans   : Transition_Vectors.Vector;
    Initial : Unbounded_String;
 
@@ -83,8 +81,6 @@ procedure Generate is
       Add_Unique (States, From_S);
       Add_Unique (States, To_S);
       Add_Unique (Events, Trim (To_String (Rest), Both));
-      Add_Unique (Guards, To_String (Guard_S));
-      Add_Unique (Actions, To_String (Action_S));
       Trans.Append
         (Transition'
            (From   => To_Unbounded_String (From_S),
@@ -136,12 +132,6 @@ procedure Generate is
       Put_Line (F, "package Hello_World_Defs is");
       Put_Line (F, "   type State is (" & Joined (States) & ");");
       Put_Line (F, "   type Event_Kind is (" & Joined (Events) & ");");
-      if not Guards.Is_Empty then
-         Put_Line (F, "   type Guard_Kind is (" & Joined (Guards) & ");");
-      end if;
-      if not Actions.Is_Empty then
-         Put_Line (F, "   type Action_Kind is (" & Joined (Actions) & ");");
-      end if;
       Put_Line (F, "end Hello_World_Defs;");
       Close (F);
    end Emit_Defs;
@@ -207,18 +197,16 @@ procedure Generate is
                      if Length (T.Guard) > 0 then
                         Append
                           (Cond,
-                           " and then Evaluate ("
-                           & To_String (T.Guard)
-                           & ", Ctx, Evt)");
+                           " and then " & To_String (T.Guard) & " (Ctx, Evt)");
                      end if;
                      Put_Line
                        (F, "            if " & To_String (Cond) & " then");
                      if Length (T.Action) > 0 then
                         Put_Line
                           (F,
-                           "               Execute ("
+                           "               "
                            & To_String (T.Action)
-                           & ", Ctx, Evt);");
+                           & " (Ctx, Evt);");
                      end if;
                      Put_Line
                        (F,
