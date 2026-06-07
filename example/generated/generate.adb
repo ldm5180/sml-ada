@@ -186,6 +186,7 @@ procedure Generate is
       Put_Line (F, "   procedure Process_Event");
       Put_Line
         (F, "     (M : in out Machine; Ctx : in out Context; Evt : Event);");
+      Put_Line (F, "   pragma Inline (Make, State_Of, Process_Event);");
       Put_Line (F, "end Hello_World_Machine;");
       Close (F);
    end Emit_Machine_Spec;
