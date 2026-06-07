@@ -5,14 +5,16 @@
 --                                   Process_Event is a jump-table `case`
 --    * hello_world.dot           -- a Graphviz diagram
 --
---  It is pure text in, text out: it does not depend on the definition being
---  valid Ada, which is exactly what lets it generate the enums you'd otherwise
---  hand-write.  Run it from this directory.
+--  The spec's rows use the SAME operator notation as the Ada engine's table
+--  (From + Event (Guard) / Action >= To), and a row pasted from that table --
+--  brackets, commas and all -- is accepted, so moving from the engine version
+--  to the generated version is copy-paste.  Run it from this directory.
 
-with Ada.Text_IO;           use Ada.Text_IO;
-with Ada.Strings;           use Ada.Strings;
-with Ada.Strings.Fixed;     use Ada.Strings.Fixed;
-with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
+with Ada.Text_IO;            use Ada.Text_IO;
+with Ada.Strings;            use Ada.Strings;
+with Ada.Strings.Fixed;      use Ada.Strings.Fixed;
+with Ada.Strings.Unbounded;  use Ada.Strings.Unbounded;
+with Ada.Characters.Handling; use Ada.Characters.Handling;
 with Ada.Containers.Indefinite_Vectors;
 
 procedure Generate is
@@ -31,6 +33,9 @@ procedure Generate is
    Events  : String_Vectors.Vector;
    Trans   : Transition_Vectors.Vector;
    Initial : Unbounded_String;
+
+   function Is_Ident_Char (C : Character) return Boolean
+   is (C in 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '_');
 
    procedure Add_Unique (V : in out String_Vectors.Vector; Item : String) is
    begin
@@ -51,9 +56,26 @@ procedure Generate is
       return To_String (R);
    end Joined;
 
-   --  Parse one "From + Event [Guard] / Action -> To" line.
-   procedure Parse_Transition (Line : String) is
-      Arrow  : constant Natural := Index (Line, "->");
+   --  Drop the surrounding array-aggregate punctuation so a row copied verbatim
+   --  from the Ada table ("[Established + ... >= Fin_Wait_1," or "... >= X];")
+   --  parses unchanged.
+   function Strip_Row (S : String) return String is
+      T : Unbounded_String := To_Unbounded_String (Trim (S, Both));
+   begin
+      if Length (T) > 0 and then Element (T, 1) = '[' then
+         Delete (T, 1, 1);
+      end if;
+      while Length (T) > 0 and then Element (T, Length (T)) in ';' | ']' | ','
+      loop
+         Delete (T, Length (T), Length (T));
+      end loop;
+      return Trim (To_String (T), Both);
+   end Strip_Row;
+
+   --  Parse one "From + Event (Guard) / Action >= To" row.
+   procedure Parse_Transition (Raw : String) is
+      Line   : constant String := Strip_Row (Raw);
+      Arrow  : constant Natural := Index (Line, ">=");
       To_S   : constant String := Trim (Line (Arrow + 2 .. Line'Last), Both);
       Left   : constant String := Trim (Line (Line'First .. Arrow - 1), Both);
       Plus   : constant Natural := Index (Left, "+");
@@ -61,14 +83,14 @@ procedure Generate is
       Rest   : Unbounded_String :=
         To_Unbounded_String (Trim (Left (Plus + 1 .. Left'Last), Both));
       Guard_S, Action_S : Unbounded_String;
-      LB, RB, Sl        : Natural;
+      LP, RP, Sl        : Natural;
    begin
-      LB := Index (To_String (Rest), "[");
-      if LB > 0 then
-         RB := Index (To_String (Rest), "]");
+      LP := Index (To_String (Rest), "(");
+      if LP > 0 then
+         RP := Index (To_String (Rest), ")");
          Guard_S :=
-           To_Unbounded_String (Trim (Slice (Rest, LB + 1, RB - 1), Both));
-         Delete (Rest, LB, RB);
+           To_Unbounded_String (Trim (Slice (Rest, LP + 1, RP - 1), Both));
+         Delete (Rest, LP, RP);
       end if;
 
       Sl := Index (To_String (Rest), "/");
@@ -101,20 +123,28 @@ procedure Generate is
             if Line = "" or else Line (Line'First) = '#' then
                null;
             elsif Line'Length >= 7
-              and then Line (Line'First .. Line'First + 6) = "initial"
+              and then To_Lower (Line (Line'First .. Line'First + 6)) = "initial"
+              and then (Line'Length = 7
+                        or else not Is_Ident_Char (Line (Line'First + 7)))
             then
+               --  "Initial => X" (as in the Ada Make call) or "initial: X".
                declare
                   After : constant String :=
                     Trim (Line (Line'First + 7 .. Line'Last), Both);
-                  Val   : constant String :=
-                    (if After'Length > 0 and then After (After'First) = ':'
-                     then Trim (After (After'First + 1 .. After'Last), Both)
-                     else After);
+                  Start : Positive := After'First;
                begin
-                  Initial := To_Unbounded_String (Val);
+                  while Start <= After'Last
+                    and then After (Start) in ':' | '=' | '>' | ' '
+                  loop
+                     Start := Start + 1;
+                  end loop;
+                  Initial :=
+                    To_Unbounded_String (Trim (After (Start .. After'Last), Both));
                end;
-            else
+            elsif Index (Line, ">=") > 0 then
                Parse_Transition (Line);
+            else
+               null;  --  not a transition row (e.g. a stray "Table : ... :=")
             end if;
          end;
       end loop;
