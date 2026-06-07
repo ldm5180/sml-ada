@@ -1,13 +1,13 @@
 pragma Ada_2022;
 
 --  A concrete instance so gnatprove has something to verify (it does not
---  analyse uninstantiated generics).  It instantiates the DSL layer
---  (Sml_Ada.Machines + Sml_Ada.Machines.Dsl) for a turnstile and proves the
---  engine is free of run-time errors when driven, plus that Make establishes
+--  analyse uninstantiated generics).  It instantiates the engine and its
+--  operators (Sml_Ada.Machines + Sml_Ada.Machines.Operators) for a turnstile
+--  and proves the engine is free of run-time errors, plus that Make establishes
 --  the initial state (its Post chains through to Run's result).
 
 with Sml_Ada.Machines;
-with Sml_Ada.Machines.Dsl;
+with Sml_Ada.Machines.Operators;
 
 package Turnstile_Proof
   with SPARK_Mode
@@ -45,7 +45,7 @@ is
         Evaluate    => Evaluate,
         Execute     => Execute);
 
-   package D is new SM.Dsl (Always => Always, Nothing => Nothing);
+   package Op is new SM.Operators (Always => Always, Nothing => Nothing);
 
    function Run return State
    with Post => Run'Result = Locked;

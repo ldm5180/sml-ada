@@ -38,13 +38,13 @@ jobs:
       - name: Build & run the example without tracing
         run: |
           alr exec -- gprbuild -p -XTRACE=off -P example/example.gpr
-          ./example/bin/hello_world_dsl
+          ./example/bin/hello_world
 
       - name: Build & run the example with tracing
         run: |
           rm -rf example/obj example/bin
           alr exec -- gprbuild -p -XTRACE=on -P example/example.gpr
-          ./example/bin/hello_world_dsl
+          ./example/bin/hello_world
 
   proof:
     name: SPARK proof

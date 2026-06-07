@@ -2,7 +2,7 @@ package body Turnstile_Proof
   with SPARK_Mode
 is
 
-   use SM, D;
+   use SM, Op;
 
    --  The turnstile's only guard is "Always", so it ignores its inputs.
    function Evaluate

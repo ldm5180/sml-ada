@@ -1,13 +1,13 @@
---  Opt-in operator DSL for Sml_Ada.Machines, letting a transition read close
---  to Boost.SML:  From + Event (Guard) / Action >= To.
+--  Opt-in operators for Sml_Ada.Machines, letting a transition read close to
+--  Boost.SML:  From + Event (Guard) / Action >= To.
 --
 --  A row built this way is just a Transition, so a table is an ordinary array
 --  aggregate fed to the usual Make -- no extra container.  Everything here is
 --  in the SPARK subset and builds on GNAT 14+.
 --
 --     package SM is new Sml_Ada.Machines (...);
---     package D  is new SM.Dsl (Always => Always, Nothing => Nothing);
---     use SM, D;
+--     package Op is new SM.Operators (Always => Always, Nothing => Nothing);
+--     use SM, Op;
 --
 --     --  One wrapper constant per event (enables the "()" guard; its name
 --     --  must differ from the Event_Kind literal, hence the E_ prefix here).
@@ -20,7 +20,7 @@
 generic
    Always : Guard_Kind;
    Nothing : Action_Kind;
-package Sml_Ada.Machines.Dsl with SPARK_Mode is
+package Sml_Ada.Machines.Operators with SPARK_Mode is
 
    type Ev is tagged record
       Kind : Event_Kind;
@@ -63,4 +63,4 @@ package Sml_Ada.Machines.Dsl with SPARK_Mode is
    function ">=" (S : Source; To : State) return Transition
    is ((S.From, S.Kind, S.Guard, S.Action, To));
 
-end Sml_Ada.Machines.Dsl;
+end Sml_Ada.Machines.Operators;

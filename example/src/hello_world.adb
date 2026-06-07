@@ -1,7 +1,7 @@
 pragma Ada_2022;
 
 --  A TCP-teardown machine (Boost.SML's hello_world) built with the opt-in
---  operator DSL (Sml_Ada.Machines.Dsl) so each row reads close to Boost.SML:
+--  operators (Sml_Ada.Machines.Operators) so each row reads close to Boost.SML:
 --  From + Event (Guard) / Action >= To.
 --
 --  Read this top-to-bottom as a recipe for building your own machine.
@@ -9,13 +9,13 @@ pragma Ada_2022;
 with Ada.Text_IO; use Ada.Text_IO;
 
 with Sml_Ada.Machines;
-with Sml_Ada.Machines.Dsl;
+with Sml_Ada.Machines.Operators;
 with Trace_Config;
 
-procedure Hello_World_Dsl is
+procedure Hello_World is
 
    --  Event_Kind literals are prefixed E_* so the event "names" below
-   --  (Release, Ack, ...), which are the DSL wrappers, don't collide.
+   --  (Release, Ack, ...), which are the operator wrappers, don't collide.
    type State is (Established, Fin_Wait_1, Fin_Wait_2, Timed_Wait, Closed);
    type Event_Kind is (E_Release, E_Ack, E_Fin, E_Timeout);
 
@@ -92,10 +92,10 @@ procedure Hello_World_Dsl is
         Debug       => Trace_Config.Enabled,
         Trace       => Put_Trace);
 
-   --  Opt in to the operator DSL, naming the "always" guard and "do nothing"
+   --  Opt in to the operators, naming the "always" guard and "do nothing"
    --  action used by rows that omit them.
-   package D is new SM.Dsl (Always => Always, Nothing => Nothing);
-   use SM, D;
+   package Op is new SM.Operators (Always => Always, Nothing => Nothing);
+   use SM, Op;
 
    Release : constant Ev := (Kind => E_Release);
    Ack     : constant Ev := (Kind => E_Ack);
@@ -122,4 +122,4 @@ begin
    Process_Event (M, Ctx, (Kind => E_Fin, Id => 42, Fin_Valid => True));
    Process_Event (M, Ctx, (Kind => E_Timeout));
    Put_Line ("final: " & State_Of (M)'Image);
-end Hello_World_Dsl;
+end Hello_World;

@@ -5,7 +5,7 @@ Declarative, low-overhead **state machines for Ada**, inspired by
 machine as a table you can read top-to-bottom — the way a UML state chart reads —
 while keeping the engine small, fast, and provable.
 
-The example (`example/hello_world_dsl.adb`, a port of Boost.SML's TCP-teardown
+The example (`example/hello_world.adb`, a port of Boost.SML's TCP-teardown
 example) is exactly this diagram:
 
 ![hello_world state machine](docs/hello_world.svg)
@@ -23,35 +23,37 @@ Table : constant Transition_Table :=
 
 You can't reproduce Boost.SML's `src + event[guard] / action = dst` operator DSL
 exactly in Ada (`=` must return `Boolean`, there is no user-definable `[]`, and
-operator symbols are a fixed set) — but `Sml_Ada.Machines.Dsl` gets close with
-`+`, `(...)`, `/` and `>=`, because the *at-a-glance* quality of SML lives in the
+operator symbols are a fixed set) — but `Sml_Ada.Machines.Operators` gets close
+with `+`, `(...)`, `/` and `>=`, because the *at-a-glance* quality of SML lives in the
 row layout, not the exact operators. States and events are enumeration types,
 transitions are a flat array (one row each), and guards and actions are **named**
 rather than stored as subprogram pointers. Naming them keeps the table pure
 data, lets the compiler inline the dispatch, makes the `case` arms
 exhaustiveness-checked, and keeps the engine provable with SPARK.
 
-`Sml_Ada.Machines` is the engine; `Sml_Ada.Machines.Dsl` is the opt-in operator
-layer that produces the rows above. The core operation is `Process_Event`
-(matching Boost.SML's `process_event`).
+`Sml_Ada.Machines` is the engine; `Sml_Ada.Machines.Operators` is the opt-in
+operator layer that produces the rows above. The core operation is
+`Process_Event` (matching Boost.SML's `process_event`).
 
-## The operator DSL
+## Operator notation
 
-Instantiate the `Sml_Ada.Machines.Dsl` child on your `Machines` instance, naming
-the "always" guard and "do nothing" action used by rows that omit them:
+Instantiate the `Sml_Ada.Machines.Operators` child on your `Machines` instance,
+naming the "always" guard and "do nothing" action used by rows that omit them:
 
 ```ada
 package SM is new Sml_Ada.Machines (...);
-package D  is new SM.Dsl (Always => Always, Nothing => Nothing);
-use SM, D;
+package Op is new SM.Operators (Always => Always, Nothing => Nothing);
+use SM, Op;
 
 Release : constant Ev := (Kind => E_Release);   --  one wrapper per event
 --  Ack, Fin, Timeout : likewise
 ```
 
-A row built with `+`, `(...)`, `/` and `>=` is just a `Transition`, so the table
-is an ordinary array aggregate fed to the usual `Make` — no special container,
-and it stays in the SPARK subset. Costs: a wrapper constant per event (its name
+A row built this way is just a `Transition`, so the table is an ordinary array
+aggregate fed to the usual `Make` — no special container, and it stays in the
+SPARK subset. (The engine also accepts plain tuple rows
+`(Established, Release, Always, Send_Fin, Fin_Wait_1)` without these operators —
+that's what the tests use.) Costs: a wrapper constant per event (its name
 must differ from the `Event_Kind` literal, hence the `E_*` prefix), and `>=`
 rather than SML's `=` for the target. The initial state is given to `Make`
 (SML's `*`); a state with no outgoing row is terminal (SML's `X`).
@@ -108,7 +110,7 @@ action, and the resulting state. When `Debug` is `False` the trace calls —
 disabled tracing costs nothing. Build the example with tracing on to see it:
 
 ```console
-$ alr exec -- gprbuild -XTRACE=on -P example/example.gpr && ./example/bin/hello_world_dsl
+$ alr exec -- gprbuild -XTRACE=on -P example/example.gpr && ./example/bin/hello_world
 start: ESTABLISHED
 [trace]event E_RELEASE in state ESTABLISHED
 [trace]  guard ALWAYS => TRUE
@@ -120,8 +122,8 @@ final: CLOSED
 
 ### Formal verification (SPARK)
 
-The engine is written in the SPARK subset. `proof/` instantiates the DSL layer
-for a turnstile and `gnatprove` verifies it: `Process_Event` is proved free of
+The engine is written in the SPARK subset. `proof/` instantiates the engine and
+its operators for a turnstile and `gnatprove` verifies it: `Process_Event` is proved free of
 run-time errors, and `Make`'s contract (`State_Of (Make'Result) = Initial`)
 holds (`gnatprove` only analyses a generic through a concrete instance). `Make`'s
 body is excluded from proof because its `Total`-completeness check raises
@@ -133,7 +135,7 @@ body is excluded from proof because its `Total`-completeness check raises
 alr build                                   # build the library
 alr test                                    # build + run the AUnit suite
 alr exec -- gnatprove -P proof/proof.gpr    # run the SPARK proof
-alr exec -- gprbuild -P example/example.gpr && ./example/bin/hello_world_dsl
+alr exec -- gprbuild -P example/example.gpr && ./example/bin/hello_world
 gnatformat --check src/*.ad? tests/src/*.ad? example/src/*.ad? proof/src/*.ad?
 ```
 
@@ -143,10 +145,10 @@ keeps their hand-aligned columns.
 ## Layout
 
 ```
-src/      sml_ada.ads, sml_ada-machines.{ads,adb}, sml_ada-machines-dsl.ads
+src/      sml_ada.ads, sml_ada-machines.{ads,adb}, sml_ada-machines-operators.ads
 tests/    AUnit suite (test_sml_ada.gpr)
 proof/    SPARK proof target (proof.gpr)
-example/  hello_world_dsl.adb + TRACE on/off config (example.gpr)
+example/  hello_world.adb + TRACE on/off config (example.gpr)
 docs/     hello_world.dot/.svg (state diagram)
 ```
 
