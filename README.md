@@ -129,6 +129,59 @@ holds (`gnatprove` only analyses a generic through a concrete instance). `Make`'
 body is excluded from proof because its `Total`-completeness check raises
 `Incomplete_Table` by design — that raise is part of its contract for callers.
 
+## Generating an optimized machine
+
+The table engine scans the transition table on every event — O(n) in the number
+of transitions — and stores the table in each `Machine`. For hot paths you can
+instead **generate** a specialized machine from the same definition.
+`Sml_Ada.Machines.Codegen` reads a `Transition_Table` and emits a self-contained
+package whose `Process_Event` is a `case` on the current state:
+
+```ada
+case M.Current is
+   when ESTABLISHED =>
+      if K = E_RELEASE and then Evaluate (ALWAYS, Ctx, Evt) then
+         Execute (SEND_FIN, Ctx, Evt);
+         M.Current := FIN_WAIT_1;
+         return;
+      end if;
+   --  ... one arm per state ...
+end case;
+```
+
+### Why generate
+
+- **O(1) dispatch instead of O(n).** The `case` on the current state compiles to
+  a jump table, so an event goes straight to its state's arm rather than scanning
+  the whole table. At `-O2/-O3` GNAT dissolves the result to branches — no table,
+  no scan, no indirect calls, and a `Machine` is just one enum. This is how the
+  generated form reaches hand-written C++ Boost.SML performance.
+- **Much less boilerplate.** You write only the definition — states, events,
+  guards/actions, and the table
+  (`example/generated/hello_world_def.ads`, ~40 lines). The generator writes
+  `Make`, `State_Of`, `Process_Event`, and a Graphviz diagram, reusing your
+  `Evaluate`/`Execute` so behaviour is never duplicated. Code and diagram both
+  come from the one table, so they can't drift.
+
+### How to generate and build the binary
+
+The generated example lives in `example/generated/`. The generated sources are
+**not** committed — producing them is the whole point — so it is a two-phase
+build: run the generator, then compile the consumer against what it emitted.
+
+```console
+# 1. build & run the generator -> emits hello_world_compiled.{ads,adb} + .dot
+alr exec -- gprbuild -P example/generated/generated.gpr generate.adb
+(cd example/generated && bin/generate)
+
+# 2. build & run the consumer of the generated machine
+alr exec -- gprbuild -P example/generated/generated.gpr run.adb
+./example/generated/bin/run        # start: ESTABLISHED ... final: CLOSED
+```
+
+The only file you edit is `hello_world_def.ads`; re-run step 1 whenever it
+changes.
+
 ## Building, testing, proving, formatting
 
 ```console
@@ -145,10 +198,12 @@ keeps their hand-aligned columns.
 ## Layout
 
 ```
-src/      sml_ada.ads, sml_ada-machines.{ads,adb}, sml_ada-machines-operators.ads
+src/      sml_ada.ads, sml_ada-machines.{ads,adb}, sml_ada-machines-operators.ads,
+          sml_ada-machines-codegen.{ads,adb} (the generator)
 tests/    AUnit suite (test_sml_ada.gpr)
 proof/    SPARK proof target (proof.gpr)
 example/  hello_world.adb + TRACE on/off config (example.gpr)
+example/generated/  definition + generator + generated machine (generated.gpr)
 docs/     hello_world.dot/.svg (state diagram)
 ```
 
