@@ -1,9 +1,8 @@
---  The hand-written half: the parts of a machine that can't be derived from
---  the transition table -- the event payloads, the extended-state Context, and
---  the actual guard predicates / action effects.  Everything structural (the
---  enums and the dispatch) is generated from hello_world.fsm; this is just the
---  behaviour.  The State/Event_Kind/Guard_Kind/Action_Kind enums come from the
---  generated Hello_World_Defs.
+--  The hand-written half: the parts of a machine no transition table can imply
+--  -- the event payloads, the extended-state Context, and the guard predicates
+--  and action effects.  Each guard/action is a named subprogram the generated
+--  machine calls directly (so there is no Guard_Kind/Action_Kind enum and no
+--  Evaluate/Execute dispatcher).  State/Event_Kind come from Hello_World_Defs.
 
 with Hello_World_Defs; use Hello_World_Defs;
 
@@ -27,8 +26,9 @@ package Hello_World_Logic is
 
    type Context is null record;
 
-   function Evaluate
-     (G : Guard_Kind; Ctx : Context; Evt : Event) return Boolean;
-   procedure Execute (A : Action_Kind; Ctx : in out Context; Evt : Event);
+   --  One guard (predicate) / action (effect) per name used in the spec.
+   function Is_Valid (Ctx : Context; Evt : Event) return Boolean;
+   procedure Send_Fin (Ctx : in out Context; Evt : Event);
+   procedure Send_Ack (Ctx : in out Context; Evt : Event);
 
 end Hello_World_Logic;

@@ -2,30 +2,26 @@ with Ada.Text_IO; use Ada.Text_IO;
 
 package body Hello_World_Logic is
 
-   function Evaluate
-     (G : Guard_Kind; Ctx : Context; Evt : Event) return Boolean
-   is
+   function Is_Valid (Ctx : Context; Evt : Event) return Boolean is
       pragma Unreferenced (Ctx);
    begin
       return
-        (case G is
-           when Is_Valid =>
-             (case Evt.Kind is
-                when Ack    => Evt.Ack_Valid,
-                when Fin    => Evt.Fin_Valid,
-                when others => False));
-   end Evaluate;
+        (case Evt.Kind is
+           when Ack    => Evt.Ack_Valid,
+           when Fin    => Evt.Fin_Valid,
+           when others => False);
+   end Is_Valid;
 
-   procedure Execute (A : Action_Kind; Ctx : in out Context; Evt : Event) is
+   procedure Send_Fin (Ctx : in out Context; Evt : Event) is
       pragma Unreferenced (Ctx, Evt);
    begin
-      case A is
-         when Send_Fin =>
-            Put_Line ("send: fin");
+      Put_Line ("send: fin");
+   end Send_Fin;
 
-         when Send_Ack =>
-            Put_Line ("send: ack");
-      end case;
-   end Execute;
+   procedure Send_Ack (Ctx : in out Context; Evt : Event) is
+      pragma Unreferenced (Ctx, Evt);
+   begin
+      Put_Line ("send: ack");
+   end Send_Ack;
 
 end Hello_World_Logic;

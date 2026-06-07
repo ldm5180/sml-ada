@@ -154,7 +154,7 @@ and the generated `Process_Event` is:
 case M.Current is
    when Established =>
       if Evt.Kind = Release then
-         Execute (Send_Fin, Ctx, Evt);
+         Send_Fin (Ctx, Evt);
          M.Current := Fin_Wait_1;
          return;
       end if;
@@ -170,11 +170,12 @@ end case;
   no scan, no indirect calls, and a `Machine` is just one enum. This is how the
   generated form reaches hand-written C++ Boost.SML performance.
 - **Much less boilerplate.** From the spec, the generator derives the
-  `State`/`Event_Kind`/`Guard_Kind`/`Action_Kind` enums and writes `Make`,
-  `State_Of`, `Process_Event`, and a Graphviz diagram. You hand-write only the
-  parts no table can imply — the event payloads, the `Context`, and the
-  guard/action bodies — in `hello_world_logic.ads` (a parser, not an Ada value,
-  is the source of truth, which is what lets the *enums* be generated too).
+  `State`/`Event_Kind` enums and writes `Make`, `State_Of`, `Process_Event`, and
+  a Graphviz diagram. The machine calls each guard/action **by name**, so you
+  hand-write only the parts no table can imply — in `hello_world_logic.ads`: the
+  event payloads, the `Context`, and one small subprogram per guard/action
+  (`Is_Valid`, `Send_Fin`, `Send_Ack`). A parser, not an Ada value, is the source
+  of truth, which is what lets the enums be generated too.
 
 ### How to generate and build the binary
 
