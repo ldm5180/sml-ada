@@ -1,9 +1,7 @@
-with "../../sml_ada.gpr";
-
---  Two-phase: build & run `generate` to emit the compiled machine + diagram,
---  then build `run` (the consumer of the generated machine).  The generated
---  sources are NOT committed (the point of the example is to produce them), so
---  build `generate.adb` first, run it, then build `run.adb`.
+--  Self-contained: `generate` reads hello_world.fsm and emits the machine, and
+--  the generated machine has no library dependency.  Two-phase: build & run
+--  `generate` first, then build `run` (the consumer).  The generated sources
+--  are NOT committed (producing them is the point of the example).
 project Generated is
 
    for Source_Dirs use (".");
