@@ -99,12 +99,10 @@ jobs:
       - name: Set up Alire + GNAT toolchain
         uses: alire-project/setup-alire@v6
 
-      - name: Build the library and the generator
-        # Generated sources are NOT committed, so build only the generator main
-        # first (its closure is just the definition + Codegen).
-        run: |
-          alr --non-interactive build
-          alr exec -- gprbuild -p -P example/generated/generated.gpr generate.adb
+      - name: Build the generator
+        # Generated sources are NOT committed, so build the generator main first
+        # (it just parses hello_world.fsm -- no library dependency).
+        run: alr exec -- gprbuild -p -P example/generated/generated.gpr generate.adb
 
       - name: Generate, then build & run the consumer
         # Proves the generator runs, and that what it emits compiles and works.

@@ -133,16 +133,29 @@ body is excluded from proof because its `Total`-completeness check raises
 
 The table engine scans the transition table on every event — O(n) in the number
 of transitions — and stores the table in each `Machine`. For hot paths you can
-instead **generate** a specialized machine from the same definition.
-`Sml_Ada.Machines.Codegen` reads a `Transition_Table` and emits a self-contained
-package whose `Process_Event` is a `case` on the current state:
+instead **generate** a specialized machine from a terse spec. The generator
+(`example/generated/generate.adb`) reads a text spec and emits the enums and a
+self-contained machine whose `Process_Event` is a `case` on the current state.
+
+The spec (`example/generated/hello_world.fsm`) is the whole machine:
+
+```
+initial: Established
+
+Established + Release            / Send_Fin -> Fin_Wait_1
+Fin_Wait_1  + Ack      [Is_Valid]           -> Fin_Wait_2
+Fin_Wait_2  + Fin      [Is_Valid] / Send_Ack -> Timed_Wait
+Timed_Wait  + Timeout                        -> Closed
+```
+
+and the generated `Process_Event` is:
 
 ```ada
 case M.Current is
-   when ESTABLISHED =>
-      if K = E_RELEASE and then Evaluate (ALWAYS, Ctx, Evt) then
-         Execute (SEND_FIN, Ctx, Evt);
-         M.Current := FIN_WAIT_1;
+   when Established =>
+      if Evt.Kind = Release then
+         Execute (Send_Fin, Ctx, Evt);
+         M.Current := Fin_Wait_1;
          return;
       end if;
    --  ... one arm per state ...
@@ -156,12 +169,12 @@ end case;
   the whole table. At `-O2/-O3` GNAT dissolves the result to branches — no table,
   no scan, no indirect calls, and a `Machine` is just one enum. This is how the
   generated form reaches hand-written C++ Boost.SML performance.
-- **Much less boilerplate.** You write only the definition — states, events,
-  guards/actions, and the table
-  (`example/generated/hello_world_def.ads`, ~40 lines). The generator writes
-  `Make`, `State_Of`, `Process_Event`, and a Graphviz diagram, reusing your
-  `Evaluate`/`Execute` so behaviour is never duplicated. Code and diagram both
-  come from the one table, so they can't drift.
+- **Much less boilerplate.** From the spec, the generator derives the
+  `State`/`Event_Kind`/`Guard_Kind`/`Action_Kind` enums and writes `Make`,
+  `State_Of`, `Process_Event`, and a Graphviz diagram. You hand-write only the
+  parts no table can imply — the event payloads, the `Context`, and the
+  guard/action bodies — in `hello_world_logic.ads` (a parser, not an Ada value,
+  is the source of truth, which is what lets the *enums* be generated too).
 
 ### How to generate and build the binary
 
@@ -170,7 +183,7 @@ The generated example lives in `example/generated/`. The generated sources are
 build: run the generator, then compile the consumer against what it emitted.
 
 ```console
-# 1. build & run the generator -> emits hello_world_compiled.{ads,adb} + .dot
+# 1. build & run the generator -> emits the enums, machine, and diagram
 alr exec -- gprbuild -P example/generated/generated.gpr generate.adb
 (cd example/generated && bin/generate)
 
@@ -179,8 +192,8 @@ alr exec -- gprbuild -P example/generated/generated.gpr run.adb
 ./example/generated/bin/run        # start: ESTABLISHED ... final: CLOSED
 ```
 
-The only file you edit is `hello_world_def.ads`; re-run step 1 whenever it
-changes.
+You edit only `hello_world.fsm` (the spec) and `hello_world_logic.adb` (the
+behaviour); re-run step 1 whenever the spec changes.
 
 ## Building, testing, proving, formatting
 
@@ -198,12 +211,12 @@ keeps their hand-aligned columns.
 ## Layout
 
 ```
-src/      sml_ada.ads, sml_ada-machines.{ads,adb}, sml_ada-machines-operators.ads,
-          sml_ada-machines-codegen.{ads,adb} (the generator)
+src/      sml_ada.ads, sml_ada-machines.{ads,adb}, sml_ada-machines-operators.ads
 tests/    AUnit suite (test_sml_ada.gpr)
 proof/    SPARK proof target (proof.gpr)
 example/  hello_world.adb + TRACE on/off config (example.gpr)
-example/generated/  definition + generator + generated machine (generated.gpr)
+example/generated/  hello_world.fsm spec + generate.adb + hand-written logic;
+          generates a self-contained machine (generated.gpr)
 docs/     hello_world.dot/.svg (state diagram)
 ```
 
