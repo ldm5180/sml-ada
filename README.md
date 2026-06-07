@@ -137,15 +137,17 @@ instead **generate** a specialized machine from a terse spec. The generator
 (`example/generated/generate.adb`) reads a text spec and emits the enums and a
 self-contained machine whose `Process_Event` is a `case` on the current state.
 
-The spec (`example/generated/hello_world.fsm`) is the whole machine:
+The spec (`example/generated/hello_world.fsm`) is the whole machine, written in
+the **same operator notation as the engine's Ada table** — so migrating from the
+engine version is copy-paste (the aggregate's `[`, commas and `];` are tolerated):
 
 ```
-initial: Established
+Initial => Established
 
-Established + Release            / Send_Fin -> Fin_Wait_1
-Fin_Wait_1  + Ack      [Is_Valid]           -> Fin_Wait_2
-Fin_Wait_2  + Fin      [Is_Valid] / Send_Ack -> Timed_Wait
-Timed_Wait  + Timeout                        -> Closed
+Established + Release            / Send_Fin >= Fin_Wait_1
+Fin_Wait_1  + Ack     (Is_Valid)            >= Fin_Wait_2
+Fin_Wait_2  + Fin     (Is_Valid) / Send_Ack >= Timed_Wait
+Timed_Wait  + Timeout                       >= Closed
 ```
 
 and the generated `Process_Event` is:

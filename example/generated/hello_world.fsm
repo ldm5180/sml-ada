@@ -1,10 +1,11 @@
 # TCP teardown -- Boost.SML's hello_world, as a terse spec.
-# Syntax:  From + Event [Guard] / Action -> To   ([Guard] and "/ Action" optional)
-# This file is the single source of truth; `generate` turns it into Ada.
+# Rows use the SAME operator notation as the Ada engine's table, so a row can be
+# copied straight from example/hello_world.adb (brackets/commas are tolerated):
+#   From + Event (Guard) / Action >= To     ((Guard) and "/ Action" optional)
 
-initial: Established
+Initial => Established
 
-Established + Release            / Send_Fin -> Fin_Wait_1
-Fin_Wait_1  + Ack      [Is_Valid]           -> Fin_Wait_2
-Fin_Wait_2  + Fin      [Is_Valid] / Send_Ack -> Timed_Wait
-Timed_Wait  + Timeout                        -> Closed
+Established + Release            / Send_Fin >= Fin_Wait_1
+Fin_Wait_1  + Ack     (Is_Valid)            >= Fin_Wait_2
+Fin_Wait_2  + Fin     (Is_Valid) / Send_Ack >= Timed_Wait
+Timed_Wait  + Timeout                       >= Closed
