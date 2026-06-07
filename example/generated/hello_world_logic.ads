@@ -27,8 +27,12 @@ package Hello_World_Logic is
    type Context is null record;
 
    --  One guard (predicate) / action (effect) per name used in the spec.
+   --  Inline so the whole machine dissolves into a constant-event driver (the
+   --  C++ lambdas inline the same way) -- see example/generated/run.adb.
    function Is_Valid (Ctx : Context; Evt : Event) return Boolean;
    procedure Send_Fin (Ctx : in out Context; Evt : Event);
    procedure Send_Ack (Ctx : in out Context; Evt : Event);
+
+   pragma Inline (Is_Valid, Send_Fin, Send_Ack);
 
 end Hello_World_Logic;

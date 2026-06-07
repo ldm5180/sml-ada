@@ -168,39 +168,68 @@ end case;
 
 - **O(1) dispatch instead of O(n).** The `case` on the current state compiles to
   a jump table, so an event goes straight to its state's arm rather than scanning
-  the whole table. At `-O2/-O3` GNAT dissolves the result to branches — no table,
-  no scan, no indirect calls, and a `Machine` is just one enum. This is how the
-  generated form reaches hand-written C++ Boost.SML performance.
+  the whole table. No table, no scan, no indirect calls, and a `Machine` is one
+  enum.
+- **It dissolves to nothing for a fixed event sequence.** The generated machine
+  is marked `Inline`, so a whole-program driver that feeds compile-time-known
+  events constant-folds the entire machine away. `example/generated/run.adb`
+  mirrors Boost.SML's `main` — a baked sequence with a `pragma Assert` on each
+  resulting state (`assert(sm.is(...))` in C++):
+
+  ```ada
+  M : Machine := Make;                                  --  Established
+  Process_Event (M, Ctx, (Kind => Release));
+  pragma Assert (State_Of (M) = Fin_Wait_1);
+  Process_Event (M, Ctx, (Kind => Ack, Ack_Valid => True));
+  pragma Assert (State_Of (M) = Fin_Wait_2);
+  --  ... Fin, Timeout ...
+  ```
+
+  Built at `-O3 -gnatn` (cross-unit inlining), `_ada_run` reduces to just the
+  action side effects — `Process_Event`, the guards, the state and even the
+  asserts (proven true) all gone:
+
+  ```asm
+  _ada_run:
+      lea    rdi, ["send: fin"]
+      call   ada__text_io__put_line
+      lea    rdi, ["send: ack"]
+      jmp    ada__text_io__put_line     ; tail call
+  ```
+
+  That is the same shape as the optimized Boost.SML `main` (two `printf`s) — the
+  compiler does the dissolving, here as in C++ (C++ gets it for free because it's
+  header-only one-TU; Ada needs `pragma Inline` + `-gnatn` to inline across units).
 - **Much less boilerplate.** From the spec, the generator derives the
   `State`/`Event_Kind` enums and writes `Make`, `State_Of`, `Process_Event`, and
-  a Graphviz diagram. The machine calls each guard/action **by name**, so you
-  hand-write only the parts no table can imply — in `hello_world_logic.ads`: the
-  event payloads, the `Context`, and one small subprogram per guard/action
-  (`Is_Valid`, `Send_Fin`, `Send_Ack`). A parser, not an Ada value, is the source
-  of truth, which is what lets the enums be generated too.
+  a Graphviz diagram. The machine calls each guard/action **by name**, so the
+  only hand-written Ada is the parts no table can imply — `hello_world_logic`
+  (event payloads, `Context`, one inlinable subprogram per guard/action) — plus
+  the driver. A parser, not an Ada value, is the source of truth, which is what
+  lets the enums be generated too.
 
 ### How to generate and build the binary
 
 The generated example lives in `example/generated/`. The generated sources are
 **not** committed — producing them is the whole point — so it is a two-phase
-build: run the generator, then compile the consumer against what it emitted.
+build: run the generator, then compile the driver against what it emitted (the
+`.gpr` already sets `-O3 -gnatn` so it dissolves as above).
 
 ```console
-# 1. build & run the generator -> emits the enums, machine, and diagram
+# 1. generate the enums + machine + diagram from the spec
 alr exec -- gprbuild -P example/generated/generated.gpr generate.adb
 (cd example/generated && bin/generate)
 
-# 2. build & run the consumer of the generated machine
+# 2. build & run the whole-program driver
 alr exec -- gprbuild -P example/generated/generated.gpr run.adb
-./example/generated/bin/run        # start: ESTABLISHED ... final: CLOSED
+./example/generated/bin/run        # send: fin / send: ack
 ```
 
-You edit `hello_world.fsm` (the spec) and the `hello_world_logic` package — its
-spec (`.ads`: the `Event` payloads, the `Context`, and the guard/action
-declarations) and body (`.adb`: their implementations). Ada requires a body's
-declaration to live in the same package, and that package also carries the
-payloads/`Context` the spec can't express — so the `.ads` is hand-written, not
-generated. Re-run step 1 whenever `hello_world.fsm` changes.
+You hand-write `hello_world.fsm` (the spec), the `hello_world_logic` package
+(`.ads` + `.adb`: the `Event` payloads, the `Context`, and one inlinable
+subprogram per guard/action), and `run.adb` (the driver, mirroring Boost.SML's
+`main`). The generator emits the enums and the inlinable machine. Re-run step 1
+whenever `hello_world.fsm` changes.
 
 ## Building, testing, proving, formatting
 

@@ -10,7 +10,12 @@ project Generated is
    for Main use ("generate.adb", "run.adb");
 
    package Compiler is
-      for Default_Switches ("Ada") use ("-g", "-gnatwa", "-gnat2022");
+      --  -O3 + cross-unit inlining (-gnatn) so the constant-event driver in
+      --  run.adb dissolves the machine entirely, like the optimized C++.
+      --  -gnata keeps run.adb's state assertions active (they fold away once
+      --  proven).  The generator (generate.adb) builds under the same switches.
+      for Default_Switches ("Ada") use
+        ("-O3", "-gnatn", "-gnata", "-g", "-gnatwa", "-gnat2022");
    end Compiler;
 
 end Generated;
