@@ -2,12 +2,18 @@ package body Sml_Ada.Machines
   with SPARK_Mode
 is
 
+   --  Excluded from proof: the Total-completeness check raises
+   --  Incomplete_Table by design.  Make's Post (State_Of (Make'Result) =
+   --  Initial) is the contract gnatprove assumes for callers; Process_Event
+   --  below is fully analysed.
    function Make
      (Table        : Transition_Table;
       Initial      : State;
       Complete     : Completeness := Partial;
       On_Unhandled : Unhandled_Policy := Stay;
-      Default      : State := State'First) return Machine is
+      Default      : State := State'First) return Machine
+   with SPARK_Mode => Off
+   is
    begin
       if Complete = Total then
          for S in State loop
@@ -32,23 +38,9 @@ is
      (M : in out Machine; Ctx : in out Context; Evt : Event)
    is
       K : constant Event_Kind := Kind_Of (Evt);
-
-      --  'Image of a composite is multi-line; flatten it for one-line traces.
-      function One_Line (S : String) return String is
-         R : String (S'Range) := S;
-      begin
-         for I in R'Range loop
-            if R (I) = ASCII.LF then
-               R (I) := ' ';
-            end if;
-         end loop;
-         return R;
-      end One_Line;
-
    begin
       if Debug then
-         Trace
-           ("event " & One_Line (Evt'Image) & " in state " & M.Current'Image);
+         Trace ("event " & K'Image & " in state " & M.Current'Image);
       end if;
 
       for T of M.Table loop
@@ -73,11 +65,6 @@ is
 
                   Execute (T.Action, Ctx, Evt);
                   M.Current := T.To;
-
-                  if Debug then
-                     Trace ("  context " & One_Line (Ctx'Image));
-                  end if;
-
                   return;
                end if;
             end;

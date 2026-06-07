@@ -49,7 +49,8 @@ package Sml_Ada.Machines with SPARK_Mode is
    with Post => State_Of (Make'Result) = Initial;
 
    procedure Process_Event
-     (M : in out Machine; Ctx : in out Context; Evt : Event);
+     (M : in out Machine; Ctx : in out Context; Evt : Event)
+   with Exceptional_Cases => (Unhandled_Event => True);
 
 private
 
