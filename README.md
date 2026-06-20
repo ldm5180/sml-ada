@@ -138,6 +138,24 @@ Each region keeps its own state; `Count` fixes the shared table length (a
 machines — are composed by hand: just call each one's `Process_Event`. See
 `example/orthogonal_regions.adb`.
 
+### Run-to-completion (internal events)
+
+A state can settle itself by emitting an event on entry — a `Dialing` state that
+immediately sends `Connect`. `Sml.Machines.Reactive` feeds the outside event,
+then keeps processing each entered state's entry event until one settles with
+none:
+
+```ada
+package RC is new SM.Reactive
+  (Has_Entry_Event => Has_Entry_Event, Entry_Event => Entry_Event);
+
+RC.Run_To_Completion (M, Ctx, Dial);   --  Idle -> Dialing -> Connected
+```
+
+The chain is bounded by `Max_Steps` (default 16), so a cyclic configuration
+stops instead of looping forever — which is also how SPARK proves it terminates.
+See `example/run_to_completion.adb`.
+
 ### Completeness & unhandled events
 
 `Make` takes two policy knobs:
@@ -312,11 +330,12 @@ keeps their hand-aligned columns.
 
 ```
 src/      sml.ads, sml-machines.{ads,adb}, sml-machines-operators.ads,
-          sml-simple_machines.ads (no-payload), sml-machines-regions.{ads,adb}
+          sml-simple_machines.ads, sml-machines-regions.{ads,adb},
+          sml-machines-reactive.{ads,adb}
 tests/    AUnit suite (test_sml.gpr)
 proof/    SPARK proof target (proof.gpr)
-example/  hello_world.adb, simple_turnstile.adb, orthogonal_regions.adb
-          + TRACE config (example.gpr)
+example/  hello_world.adb, simple_turnstile.adb, orthogonal_regions.adb,
+          run_to_completion.adb + TRACE config (example.gpr)
 example/generated/  hello_world.fsm spec + generate.adb + hand-written logic;
           generates a self-contained machine (generated.gpr)
 docs/     hello_world.dot/.svg (state diagram)
