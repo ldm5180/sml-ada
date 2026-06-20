@@ -176,18 +176,28 @@ procedure Generate is
       Trans.Append (Tr);
    end Parse_Transition;
 
-   --  "Initial => X" / "Initial: X" / "Initial = X" names the start state.  A
-   --  transition whose From state is itself called Initial is distinguished by
-   --  its separator: a directive uses ':' '=' '>', a transition uses '+'.
+   --  "Initial => X" / "Initial: X" / "Initial = X" names the start state.
    --  Returns the (single identifier) start state, or "" if Line is not the
-   --  directive.  Only called when Line begins with the "initial" keyword.
+   --  directive -- including a transition whose From state is itself called
+   --  Initial, told apart by its separator ('+' for a row, ':' '=' '>' here).
    function Initial_State (Line : String) return String is
-      P : Natural := Line'First + 7;  --  past "initial"
+      Keyword : constant String := "initial";
+      P       : Natural := Line'First + Keyword'Length;  --  past the keyword
    begin
+      if Line'Length < Keyword'Length
+        or else To_Lower (Line (Line'First .. P - 1)) /= Keyword
+        or else (Line'Length > Keyword'Length
+                 and then Is_Ident_Char (Line (P)))
+      then
+         --  not the keyword, or a longer identifier that merely starts with it
+         return "";
+      end if;
+
       while P <= Line'Last and then Line (P) in ' ' | ASCII.HT loop
          P := P + 1;
       end loop;
       if P > Line'Last or else Line (P) not in ':' | '=' | '>' then
+         --  not the directive (e.g. a row whose From state is named Initial)
          return "";
       end if;
       while P <= Line'Last
@@ -211,24 +221,23 @@ procedure Generate is
       Open (Spec, In_File, Path);
       while not End_Of_File (Spec) loop
          declare
-            Line          : constant String := Trim (Get_Line (Spec), Both);
-            Looks_Initial : constant Boolean :=
-              Line'Length >= 7
-              and then To_Lower (Line (Line'First .. Line'First + 6))
-                       = "initial"
-              and then (Line'Length = 7
-                        or else not Is_Ident_Char (Line (Line'First + 7)));
-            Start_State   : constant String :=
-              (if Looks_Initial then Initial_State (Line) else "");
+            Line : constant String := Trim (Get_Line (Spec), Both);
          begin
             if Line = "" or else Line (Line'First) = '#' then
+               --  blank line or comment
                null;
-            elsif Start_State /= "" then
-               Initial := To_Unbounded_String (Start_State);
-            elsif Index (Line, ">=") > 0 then
-               Parse_Transition (Line);
             else
-               null;  --  e.g. a stray "Table : ... :=" wrapper line
+               declare
+                  Start_State : constant String := Initial_State (Line);
+               begin
+                  if Start_State /= "" then
+                     Initial := To_Unbounded_String (Start_State);
+                  elsif Index (Line, ">=") > 0 then
+                     Parse_Transition (Line);
+                  else
+                     null;  --  e.g. a stray "Table : ... :=" wrapper line
+                  end if;
+               end;
             end if;
          end;
       end loop;
@@ -257,6 +266,14 @@ procedure Generate is
       Close (F);
    end Emit_Defs;
 
+   --  The generated Make's signature, shared by its declaration and body
+   --  (which differ only in the trailing ";" vs " is").
+   function Make_Decl (Tail : String) return String
+   is ("   function Make (Initial : State := "
+       & To_String (Initial)
+       & ") return Machine"
+       & Tail);
+
    procedure Emit_Machine_Spec is
       F : File_Type;
    begin
@@ -268,11 +285,7 @@ procedure Generate is
       Put_Line (F, "   type Machine is record");
       Put_Line (F, "      Current : State;");
       Put_Line (F, "   end record;");
-      Put_Line
-        (F,
-         "   function Make (Initial : State := "
-         & To_String (Initial)
-         & ") return Machine;");
+      Put_Line (F, Make_Decl (";"));
       Put_Line (F, "   function State_Of (M : Machine) return State;");
       Put_Line (F, "   procedure Process_Event");
       Put_Line
@@ -288,11 +301,7 @@ procedure Generate is
       Create (F, Out_File, "hello_world_machine.adb");
       Put_Line (F, "--  Generated from hello_world.fsm.  Do not edit.");
       Put_Line (F, "package body Hello_World_Machine is");
-      Put_Line
-        (F,
-         "   function Make (Initial : State := "
-         & To_String (Initial)
-         & ") return Machine is");
+      Put_Line (F, Make_Decl (" is"));
       Put_Line (F, "     ((Current => Initial));");
       Put_Line
         (F, "   function State_Of (M : Machine) return State is (M.Current);");
@@ -301,15 +310,13 @@ procedure Generate is
         (F, "     (M : in out Machine; Ctx : in out Context; Evt : Event) is");
       Put_Line (F, "   begin");
       Put_Line (F, "      case M.Current is");
-      for I in States.First_Index .. States.Last_Index loop
+      for St of States loop
          declare
-            St  : constant String := States (I);
             Any : Boolean := False;
          begin
             Put_Line (F, "         when " & St & " =>");
-            for J in Trans.First_Index .. Trans.Last_Index loop
+            for T of Trans loop
                declare
-                  T    : constant Transition := Trans (J);
                   Cond : Unbounded_String;
                begin
                   if To_String (T.From) = St then
@@ -360,9 +367,8 @@ procedure Generate is
       Put_Line (F, "   node [shape = box, style = rounded];");
       Put_Line (F, "   __start [shape = point];");
       Put_Line (F, "   __start -> " & To_String (Initial) & ";");
-      for J in Trans.First_Index .. Trans.Last_Index loop
+      for T of Trans loop
          declare
-            T   : constant Transition := Trans (J);
             Lbl : Unbounded_String := T.On;
          begin
             if Length (T.Guard) > 0 then
