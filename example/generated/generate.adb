@@ -9,15 +9,23 @@
 --  (From + Event (Guard) / Action >= To), and a row pasted from that table --
 --  brackets, commas and all -- is accepted, so moving from the engine version
 --  to the generated version is copy-paste.  Run it from this directory.
+--
+--  A malformed spec is rejected with a diagnostic and a non-zero exit status
+--  rather than producing partial or non-compiling output.
 
-with Ada.Text_IO;            use Ada.Text_IO;
-with Ada.Strings;            use Ada.Strings;
-with Ada.Strings.Fixed;      use Ada.Strings.Fixed;
-with Ada.Strings.Unbounded;  use Ada.Strings.Unbounded;
+with Ada.Text_IO;             use Ada.Text_IO;
+with Ada.Strings;             use Ada.Strings;
+with Ada.Strings.Fixed;       use Ada.Strings.Fixed;
+with Ada.Strings.Unbounded;   use Ada.Strings.Unbounded;
 with Ada.Characters.Handling; use Ada.Characters.Handling;
+with Ada.Command_Line;
+with Ada.Exceptions;          use Ada.Exceptions;
+with Ada.Containers.Vectors;
 with Ada.Containers.Indefinite_Vectors;
 
 procedure Generate is
+
+   Spec_Error : exception;
 
    package String_Vectors is new
      Ada.Containers.Indefinite_Vectors (Positive, String);
@@ -39,7 +47,7 @@ procedure Generate is
 
    procedure Add_Unique (V : in out String_Vectors.Vector; Item : String) is
    begin
-      if Item /= "" and then not V.Contains (Item) then
+      if not V.Contains (Item) then
          V.Append (Item);
       end if;
    end Add_Unique;
@@ -56,61 +64,144 @@ procedure Generate is
       return To_String (R);
    end Joined;
 
-   --  Drop the surrounding array-aggregate punctuation so a row copied verbatim
-   --  from the Ada table ("[Established + ... >= Fin_Wait_1," or "... >= X];")
-   --  parses unchanged.
-   function Strip_Row (S : String) return String is
-      T : Unbounded_String := To_Unbounded_String (Trim (S, Both));
+   --  A row tokenizes to a flat stream of these.  Copy-paste punctuation from
+   --  the Ada table ('[', ']', ',', ';') and whitespace are skipped; '+', '/',
+   --  '(', ')' and ">=" are the operators; an identifier run is a state, event,
+   --  guard or action name.  Anything else is a malformed row.
+   type Token_Kind is (Ident, Plus, Slash, L_Paren, R_Paren, Arrow);
+
+   type Token is record
+      Kind : Token_Kind;
+      Text : Unbounded_String;
+   end record;
+
+   package Token_Vectors is new Ada.Containers.Vectors (Positive, Token);
+
+   function Tokenize (Row : String) return Token_Vectors.Vector is
+      Result : Token_Vectors.Vector;
+      P      : Natural := Row'First;
    begin
-      if Length (T) > 0 and then Element (T, 1) = '[' then
-         Delete (T, 1, 1);
-      end if;
-      while Length (T) > 0 and then Element (T, Length (T)) in ';' | ']' | ','
-      loop
-         Delete (T, Length (T), Length (T));
+      while P <= Row'Last loop
+         declare
+            C : constant Character := Row (P);
+         begin
+            if C in ' ' | ASCII.HT | '[' | ']' | ',' | ';' then
+               P := P + 1;
+            elsif C = '+' then
+               Result.Append (Token'(Plus, Null_Unbounded_String));
+               P := P + 1;
+            elsif C = '/' then
+               Result.Append (Token'(Slash, Null_Unbounded_String));
+               P := P + 1;
+            elsif C = '(' then
+               Result.Append (Token'(L_Paren, Null_Unbounded_String));
+               P := P + 1;
+            elsif C = ')' then
+               Result.Append (Token'(R_Paren, Null_Unbounded_String));
+               P := P + 1;
+            elsif C = '>' and then P < Row'Last and then Row (P + 1) = '=' then
+               Result.Append (Token'(Arrow, Null_Unbounded_String));
+               P := P + 2;
+            elsif Is_Ident_Char (C) then
+               declare
+                  Start : constant Positive := P;
+               begin
+                  while P <= Row'Last and then Is_Ident_Char (Row (P)) loop
+                     P := P + 1;
+                  end loop;
+                  Result.Append
+                    (Token'(Ident, To_Unbounded_String (Row (Start .. P - 1))));
+               end;
+            else
+               raise Spec_Error
+                 with "unexpected character '" & C & "' in row: " & Row;
+            end if;
+         end;
       end loop;
-      return Trim (To_String (T), Both);
-   end Strip_Row;
+      return Result;
+   end Tokenize;
 
-   --  Parse one "From + Event (Guard) / Action >= To" row.
-   procedure Parse_Transition (Raw : String) is
-      Line   : constant String := Strip_Row (Raw);
-      Arrow  : constant Natural := Index (Line, ">=");
-      To_S   : constant String := Trim (Line (Arrow + 2 .. Line'Last), Both);
-      Left   : constant String := Trim (Line (Line'First .. Arrow - 1), Both);
-      Plus   : constant Natural := Index (Left, "+");
-      From_S : constant String := Trim (Left (Left'First .. Plus - 1), Both);
-      Rest   : Unbounded_String :=
-        To_Unbounded_String (Trim (Left (Plus + 1 .. Left'Last), Both));
-      Guard_S, Action_S : Unbounded_String;
-      LP, RP, Sl        : Natural;
+   --  Parse one "From + Event (Guard) / Action >= To" row; (Guard) and
+   --  "/ Action" are optional.  Any other shape raises Spec_Error.
+   procedure Parse_Transition (Row : String) is
+      Toks : constant Token_Vectors.Vector := Tokenize (Row);
+      Pos  : Positive := Toks.First_Index;
+      Tr   : Transition;
+
+      function Peek return Token_Kind
+      is (if Pos <= Toks.Last_Index then Toks (Pos).Kind else Arrow);
+      --  The fallback only has to differ from the kind each Eat expects; the
+      --  end-of-row Eat (Arrow) check below catches a genuinely short row.
+
+      procedure Eat (K : Token_Kind) is
+      begin
+         if Pos > Toks.Last_Index or else Toks (Pos).Kind /= K then
+            raise Spec_Error with "malformed transition row: " & Row;
+         end if;
+         Pos := Pos + 1;
+      end Eat;
+
+      function Eat_Ident return Unbounded_String is
+      begin
+         if Pos > Toks.Last_Index or else Toks (Pos).Kind /= Ident then
+            raise Spec_Error with "expected a name in row: " & Row;
+         end if;
+         return Text : constant Unbounded_String := Toks (Pos).Text do
+            Pos := Pos + 1;
+         end return;
+      end Eat_Ident;
    begin
-      LP := Index (To_String (Rest), "(");
-      if LP > 0 then
-         RP := Index (To_String (Rest), ")");
-         Guard_S :=
-           To_Unbounded_String (Trim (Slice (Rest, LP + 1, RP - 1), Both));
-         Delete (Rest, LP, RP);
+      Tr.From := Eat_Ident;
+      Eat (Plus);
+      Tr.On := Eat_Ident;
+      if Peek = L_Paren then
+         Eat (L_Paren);
+         Tr.Guard := Eat_Ident;
+         Eat (R_Paren);
+      end if;
+      if Peek = Slash then
+         Eat (Slash);
+         Tr.Action := Eat_Ident;
+      end if;
+      Eat (Arrow);
+      Tr.To := Eat_Ident;
+      if Pos <= Toks.Last_Index then
+         raise Spec_Error with "trailing tokens in row: " & Row;
       end if;
 
-      Sl := Index (To_String (Rest), "/");
-      if Sl > 0 then
-         Action_S :=
-           To_Unbounded_String (Trim (Slice (Rest, Sl + 1, Length (Rest)), Both));
-         Delete (Rest, Sl, Length (Rest));
-      end if;
-
-      Add_Unique (States, From_S);
-      Add_Unique (States, To_S);
-      Add_Unique (Events, Trim (To_String (Rest), Both));
-      Trans.Append
-        (Transition'
-           (From   => To_Unbounded_String (From_S),
-            On     => To_Unbounded_String (Trim (To_String (Rest), Both)),
-            Guard  => Guard_S,
-            Action => Action_S,
-            To     => To_Unbounded_String (To_S)));
+      Add_Unique (States, To_String (Tr.From));
+      Add_Unique (States, To_String (Tr.To));
+      Add_Unique (Events, To_String (Tr.On));
+      Trans.Append (Tr);
    end Parse_Transition;
+
+   --  "Initial => X" / "Initial: X" / "Initial = X" names the start state.  A
+   --  transition whose From state is itself called Initial is distinguished by
+   --  its separator: a directive uses ':' '=' '>', a transition uses '+'.
+   --  Returns the (single identifier) start state, or "" if Line is not the
+   --  directive.  Only called when Line begins with the "initial" keyword.
+   function Initial_State (Line : String) return String is
+      P : Natural := Line'First + 7;  --  past "initial"
+   begin
+      while P <= Line'Last and then Line (P) in ' ' | ASCII.HT loop
+         P := P + 1;
+      end loop;
+      if P > Line'Last or else Line (P) not in ':' | '=' | '>' then
+         return "";
+      end if;
+      while P <= Line'Last and then Line (P) in ':' | '=' | '>' | ' ' | ASCII.HT
+      loop
+         P := P + 1;
+      end loop;
+      declare
+         Start : constant Positive := P;
+      begin
+         while P <= Line'Last and then Is_Ident_Char (Line (P)) loop
+            P := P + 1;
+         end loop;
+         return Line (Start .. P - 1);
+      end;
+   end Initial_State;
 
    procedure Read_Spec (Path : String) is
       Spec : File_Type;
@@ -118,39 +209,36 @@ procedure Generate is
       Open (Spec, In_File, Path);
       while not End_Of_File (Spec) loop
          declare
-            Line : constant String := Trim (Get_Line (Spec), Both);
+            Line          : constant String := Trim (Get_Line (Spec), Both);
+            Looks_Initial : constant Boolean :=
+              Line'Length >= 7
+              and then To_Lower (Line (Line'First .. Line'First + 6)) = "initial"
+              and then (Line'Length = 7
+                        or else not Is_Ident_Char (Line (Line'First + 7)));
+            Start_State   : constant String :=
+              (if Looks_Initial then Initial_State (Line) else "");
          begin
             if Line = "" or else Line (Line'First) = '#' then
                null;
-            elsif Line'Length >= 7
-              and then To_Lower (Line (Line'First .. Line'First + 6)) = "initial"
-              and then (Line'Length = 7
-                        or else not Is_Ident_Char (Line (Line'First + 7)))
-            then
-               --  "Initial => X" (as in the Ada Make call) or "initial: X".
-               declare
-                  After : constant String :=
-                    Trim (Line (Line'First + 7 .. Line'Last), Both);
-                  Start : Positive := After'First;
-               begin
-                  while Start <= After'Last
-                    and then After (Start) in ':' | '=' | '>' | ' '
-                  loop
-                     Start := Start + 1;
-                  end loop;
-                  Initial :=
-                    To_Unbounded_String (Trim (After (Start .. After'Last), Both));
-               end;
+            elsif Start_State /= "" then
+               Initial := To_Unbounded_String (Start_State);
             elsif Index (Line, ">=") > 0 then
                Parse_Transition (Line);
             else
-               null;  --  not a transition row (e.g. a stray "Table : ... :=")
+               null;  --  e.g. a stray "Table : ... :=" wrapper line
             end if;
          end;
       end loop;
       Close (Spec);
-      if Length (Initial) = 0 and then not States.Is_Empty then
+
+      if Trans.Is_Empty then
+         raise Spec_Error with "no transitions found in " & Path;
+      end if;
+      if Length (Initial) = 0 then
          Initial := To_Unbounded_String (States (States.First_Index));
+      elsif not States.Contains (To_String (Initial)) then
+         raise Spec_Error
+           with "initial state " & To_String (Initial) & " is not a state";
       end if;
    end Read_Spec;
 
@@ -304,4 +392,8 @@ begin
    Put_Line
      ("generated hello_world_defs.ads, hello_world_machine.{ads,adb}, "
       & "hello_world.dot");
+exception
+   when E : Spec_Error =>
+      Put_Line (Standard_Error, "generate: " & Exception_Message (E));
+      Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
 end Generate;
