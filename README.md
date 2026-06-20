@@ -111,6 +111,33 @@ Table : constant Transition_Table :=
 Here `Evaluate`/`Execute` receive the event *kind* directly (there's no payload
 to carry). See `example/simple_turnstile.adb`.
 
+### Orthogonal regions
+
+Orthogonal regions are one object that is *simultaneously* in several
+**different** concurrent regions — a media player at once in a playback region
+`{Stopped/Playing/Paused}` and a volume region `{Normal/Muted}`. Each is its own
+machine, every event is offered to all of them (each ignores what it doesn't
+own), and the object's state is the *combination*; because the regions differ
+you dispatch to each by hand — see `example/orthogonal_regions.adb`.
+
+For the homogeneous case — N *identical* replicas of one machine —
+`Sml.Machines.Regions` broadcasts one event to an array of machines against a
+shared `Context`:
+
+```ada
+package Reg is new SM.Regions (Count => Table'Length);
+R : Reg.Region_Array :=
+  [Make (Table, Off), Make (Table, On), Make (Table, Off)];
+
+Reg.Broadcast (R, Ctx, Tick);             --  every region steps
+pragma Assert (Reg.All_In (R, Off) = False);
+```
+
+Each region keeps its own state; `Count` fixes the shared table length (a
+`Machine` is discriminated by it). Heterogeneous regions — genuinely different
+machines — are composed by hand: just call each one's `Process_Event`. See
+`example/orthogonal_regions.adb`.
+
 ### Completeness & unhandled events
 
 `Make` takes two policy knobs:
@@ -271,10 +298,11 @@ keeps their hand-aligned columns.
 
 ```
 src/      sml.ads, sml-machines.{ads,adb}, sml-machines-operators.ads,
-          sml-simple_machines.ads (no-payload layer)
+          sml-simple_machines.ads (no-payload), sml-machines-regions.{ads,adb}
 tests/    AUnit suite (test_sml.gpr)
 proof/    SPARK proof target (proof.gpr)
-example/  hello_world.adb, simple_turnstile.adb + TRACE config (example.gpr)
+example/  hello_world.adb, simple_turnstile.adb, orthogonal_regions.adb
+          + TRACE config (example.gpr)
 example/generated/  hello_world.fsm spec + generate.adb + hand-written logic;
           generates a self-contained machine (generated.gpr)
 docs/     hello_world.dot/.svg (state diagram)

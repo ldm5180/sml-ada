@@ -36,7 +36,10 @@ package Sml.Machines with SPARK_Mode is
    Unhandled_Event  : exception;
    Incomplete_Table : exception;
 
-   type Machine (<>) is private;
+   --  Discriminated by its table length (Count).  Still indefinite, so every
+   --  Machine must be initialised by Make; Count is exposed so a fixed-length
+   --  array of them is possible (see Sml.Machines.Regions).
+   type Machine (Count : Natural) is private;
 
    function State_Of (M : Machine) return State;
 
