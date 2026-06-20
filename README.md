@@ -35,6 +35,36 @@ exhaustiveness-checked, and keeps the engine provable with SPARK.
 operator layer that produces the rows above. The core operation is
 `Process_Event` (matching Boost.SML's `process_event`).
 
+## Compared to Boost.SML
+
+Boost.SML packs everything into one ~3,400-line header via template
+metaprogramming. This library keeps a **~140-line provable core engine** and
+moves each extra capability into a small **opt-in layer** (each ~15–80 lines),
+so you pay only for what you instantiate. The whole library is ~370 lines.
+
+| Capability | Boost.SML | This library |
+|---|---|---|
+| Declarative transition DSL | `src + event[guard] / action = dst` | `From + Event (Guard) / Action >= To` (`Sml.Machines.Operators`) |
+| Named guards & actions | functor objects | enum-dispatched, so the table stays pure data and the engine inlines |
+| Events with payloads | ✓ | ✓ (variant record); or `Sml.Simple_Machines` for no-payload events |
+| Extended state | dependency injection | a `Context` record passed to guards/actions |
+| Completeness / unhandled policy | `process_event` returns handled; custom unexpected handling | `Total`/`Partial` check + `Stay`/`Raise_Error`/`Go_To_Default` |
+| Logging | `logger` policy | four structured `On_Event`/`On_Guard`/`On_Action`/`On_Unhandled` hooks |
+| Orthogonal regions | ✓ native (heterogeneous) | `Sml.Machines.Regions` for identical replicas; heterogeneous regions composed by hand |
+| Composite / hierarchical states | ✓ native sub-machines | `Sml.Machines.Composite` (child-first dispatch, bubbles to parent) |
+| Deferred events | `defer` | `Sml.Machines.Deferring` (bounded queue) |
+| Internal / run-to-completion events | `process` / internal transitions | `Sml.Machines.Reactive` (entry-event chaining, bounded by `Max_Steps`) |
+| `on_entry` / `on_exit` | ✓ native | entry events via `Reactive`; no dedicated exit actions |
+| History pseudostates | ✗ | ✗ |
+| Compile-time, low overhead | ✓ (header metaprogramming) | ✓ (generics; the generated machine dissolves to a jump table at `-O3`) |
+| Code generation | ✗ | ✓ — a text spec → enums + `case` dispatch (see below) |
+| Formal verification | ✗ | ✓ SPARK: AoRTE + contracts, `gnatprove --checks-as-errors=on` |
+
+The trade: Boost.SML offers richer *native* orthogonal regions and entry/exit
+actions in a single header; this library offers a tiny formally-verified core,
+optional codegen, and an a-la-carte feature set — at the cost of composing the
+heterogeneous-region and entry/exit cases yourself.
+
 ## Operator notation
 
 Instantiate the `Sml.Machines.Operators` child on your `Machines` instance,
