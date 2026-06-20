@@ -38,30 +38,35 @@ is
      (M : in out Machine; Ctx : in out Context; Evt : Event)
    is
       K : constant Event_Kind := Kind_Of (Evt);
+
+      --  One Debug-gated trace sink.  The message is built at the call site
+      --  regardless of Debug, so at -O0 the concatenation runs even when
+      --  tracing is off; it folds away only with inlining (-O2/-O3).  That
+      --  -O0 cost is accepted in exchange for the simpler call sites.
+      procedure Log (Message : String) is
+      begin
+         if Debug then
+            Trace (Message);
+         end if;
+      end Log;
    begin
-      if Debug then
-         Trace ("event " & K'Image & " in state " & M.Current'Image);
-      end if;
+      Log ("event " & K'Image & " in state " & M.Current'Image);
 
       for T of M.Table loop
          if T.From = M.Current and then T.On = K then
             declare
                Pass : constant Boolean := Evaluate (T.Guard, Ctx, Evt);
             begin
-               if Debug then
-                  Trace ("  guard " & T.Guard'Image & " => " & Pass'Image);
-               end if;
+               Log ("  guard " & T.Guard'Image & " => " & Pass'Image);
 
                if Pass then
-                  if Debug then
-                     Trace
-                       ("  action "
-                        & T.Action'Image
-                        & "; "
-                        & M.Current'Image
-                        & " -> "
-                        & T.To'Image);
-                  end if;
+                  Log
+                    ("  action "
+                     & T.Action'Image
+                     & "; "
+                     & M.Current'Image
+                     & " -> "
+                     & T.To'Image);
 
                   Execute (T.Action, Ctx, Evt);
                   M.Current := T.To;
@@ -71,9 +76,7 @@ is
          end if;
       end loop;
 
-      if Debug then
-         Trace ("  unhandled; policy " & M.On_Unhandled'Image);
-      end if;
+      Log ("  unhandled; policy " & M.On_Unhandled'Image);
 
       case M.On_Unhandled is
          when Stay          =>
