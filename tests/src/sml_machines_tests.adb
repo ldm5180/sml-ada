@@ -90,12 +90,15 @@ package body Sml_Machines_Tests is
         Debug       => True,
         Trace       => Capture);
 
-   --!format off
+   --  Derived from Table so the two cannot drift: the same rows, retyped for
+   --  the tracing instance (whose Transition type is a distinct instantiation).
    Dbg_Table : constant M_Dbg.Transition_Table :=
-     [(Idle, Go,   Always,    Nothing, Busy),
-      (Busy, Step, Below_Cap, Add,     Busy),
-      (Busy, Stop, Always,    Nothing, Done)];
-   --!format on
+     [for I in Table'Range =>
+        (Table (I).From,
+         Table (I).On,
+         Table (I).Guard,
+         Table (I).Action,
+         Table (I).To)];
 
    procedure Test_Guarded_Accumulation
      (T : in out AUnit.Test_Cases.Test_Case'Class)
