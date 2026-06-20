@@ -6,9 +6,9 @@
 --  exactly like the optimized C++ main.  The only output is what the actions
 --  print.
 
-with Hello_World_Defs;     use Hello_World_Defs;
-with Hello_World_Logic;    use Hello_World_Logic;
-with Hello_World_Machine;  use Hello_World_Machine;
+with Hello_World_Defs;    use Hello_World_Defs;
+with Hello_World_Logic;   use Hello_World_Logic;
+with Hello_World_Machine; use Hello_World_Machine;
 
 procedure Run is
    M   : Machine := Make;             --  initial state: Established
