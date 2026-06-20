@@ -178,6 +178,28 @@ SPARK-provable. It builds on a lower-level `Process_Event` overload that reports
 whether an event was handled instead of applying the unhandled policy. See
 `example/deferred_events.adb`.
 
+### Composite (hierarchical) states
+
+A state can contain a child machine: an event tries the child first and bubbles
+up to the parent only if the child doesn't handle it. `Sml.Machines.Composite`
+takes a `Process_Child` you wire to the child's handled-reporting
+`Process_Event`, so the child can be a different machine (and you can pick a
+different one per parent state); parent and child share the event and context
+types.
+
+```ada
+procedure Process_Child
+  (Ctx : in out Context; Evt : Event; Handled : out Boolean) is
+begin
+   Child_SM.Process_Event (Child, Ctx, Evt, Handled);
+end Process_Child;
+
+package Comp is new Parent_SM.Composite (Process_Child => Process_Child);
+Comp.Process (Parent, Ctx, Evt);   --  child first, then parent
+```
+
+See `example/composite_states.adb`.
+
 ### Completeness & unhandled events
 
 `Make` takes two policy knobs:
@@ -353,11 +375,12 @@ keeps their hand-aligned columns.
 ```
 src/      sml.ads, sml-machines.{ads,adb}, sml-machines-operators.ads,
           sml-simple_machines.ads, sml-machines-regions.{ads,adb},
-          sml-machines-reactive.{ads,adb}, sml-machines-deferring.{ads,adb}
+          sml-machines-reactive.{ads,adb}, sml-machines-deferring.{ads,adb},
+          sml-machines-composite.{ads,adb}
 tests/    AUnit suite (test_sml.gpr)
 proof/    SPARK proof target (proof.gpr)
 example/  hello_world.adb, simple_turnstile.adb, orthogonal_regions.adb,
-          run_to_completion.adb, deferred_events.adb + TRACE config
+          run_to_completion.adb, deferred_events.adb, composite_states.adb
 example/generated/  hello_world.fsm spec + generate.adb + hand-written logic;
           generates a self-contained machine (generated.gpr)
 docs/     hello_world.dot/.svg (state diagram)

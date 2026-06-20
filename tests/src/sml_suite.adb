@@ -5,6 +5,7 @@ with Sml_Simple_Machines_Tests;
 with Sml_Regions_Tests;
 with Sml_Reactive_Tests;
 with Sml_Deferring_Tests;
+with Sml_Composite_Tests;
 
 package body Sml_Suite is
 
@@ -28,6 +29,9 @@ package body Sml_Suite is
       AUnit.Test_Suites.Add_Test
         (Result,
          AUnit.Test_Cases.Test_Case_Access'(new Sml_Deferring_Tests.Test));
+      AUnit.Test_Suites.Add_Test
+        (Result,
+         AUnit.Test_Cases.Test_Case_Access'(new Sml_Composite_Tests.Test));
       return Result;
    end Suite;
 
