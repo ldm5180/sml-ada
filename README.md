@@ -101,13 +101,16 @@ end record;
 - `On_Unhandled` decides what `Process_Event` does when no row matches: `Stay`
   (default), `Raise_Error`, or `Go_To_Default`.
 
-### Tracing (zero-overhead when off)
+### Tracing
 
 Instantiate with `Debug => True` and a `Trace` procedure to log, for every
 event: the event kind, the current state, each guard tried and its result, the
-action, and the resulting state. When `Debug` is `False` the trace calls —
-*including building the message strings* — are statically eliminated, so
-disabled tracing costs nothing. Build the example with tracing on to see it:
+action, and the resulting state. The trace calls route through one `Debug`-gated
+`Log` sink, so `Debug => False` (the default) is silent. The messages are built
+at the call site and discarded when tracing is off; an optimized build
+(`-O2`/`-O3`) inlines the no-op `Log` and folds that string-building away to
+nothing, so disabled tracing costs nothing in release. Build the example with
+tracing on to see it:
 
 ```console
 $ alr exec -- gprbuild -XTRACE=on -P example/example.gpr && ./example/bin/hello_world
