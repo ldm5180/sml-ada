@@ -14,7 +14,8 @@ project Example is
      ("hello_world.adb",
       "simple_turnstile.adb",
       "orthogonal_regions.adb",
-      "run_to_completion.adb");
+      "run_to_completion.adb",
+      "deferred_events.adb");
 
    package Compiler is
       for Default_Switches ("Ada") use

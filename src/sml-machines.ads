@@ -60,6 +60,17 @@ package Sml.Machines with SPARK_Mode is
      (M : in out Machine; Ctx : in out Context; Evt : Event)
    with Exceptional_Cases => (Unhandled_Event => True);
 
+   --  Lower-level variant: fire the matching transition if its guard
+   --  passes and report whether one did.  Applies NO unhandled policy and
+   --  never raises, so a caller (a hierarchical or deferred-event layer)
+   --  can decide what an unhandled event means -- route it to a parent,
+   --  queue it, or drop it.
+   procedure Process_Event
+     (M       : in out Machine;
+      Ctx     : in out Context;
+      Evt     : Event;
+      Handled : out Boolean);
+
 private
 
    type Machine (Count : Natural) is record

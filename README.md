@@ -156,6 +156,28 @@ The chain is bounded by `Max_Steps` (default 16), so a cyclic configuration
 stops instead of looping forever — which is also how SPARK proves it terminates.
 See `example/run_to_completion.adb`.
 
+### Deferred events
+
+An event a state can't handle yet can be *deferred* — queued and re-tried after
+the next handled event. `Sml.Machines.Deferring` holds a bounded queue (a
+separate object that never touches the machine) and a `Deferred (State,
+Event_Kind)` predicate deciding what to queue:
+
+```ada
+package Def is new SM.Deferring (Deferred => Deferred, Rebuild => Rebuild);
+Q : Def.Deferral_Queue := Def.Empty_Queue;
+
+Def.Post (M, Q, Ctx, Pause);   --  unhandled but deferred -> queued
+Def.Post (M, Q, Ctx, Play);    --  handled -> the deferred Pause re-delivers
+```
+
+Because `Event` is indefinite, the queue stores event *kinds*; `Rebuild` turns a
+kind back into an event for re-delivery (exact for payload-free machines).
+`Capacity` bounds the queue (overflow raises `Deferral_Overflow`), which keeps it
+SPARK-provable. It builds on a lower-level `Process_Event` overload that reports
+whether an event was handled instead of applying the unhandled policy. See
+`example/deferred_events.adb`.
+
 ### Completeness & unhandled events
 
 `Make` takes two policy knobs:
@@ -331,11 +353,11 @@ keeps their hand-aligned columns.
 ```
 src/      sml.ads, sml-machines.{ads,adb}, sml-machines-operators.ads,
           sml-simple_machines.ads, sml-machines-regions.{ads,adb},
-          sml-machines-reactive.{ads,adb}
+          sml-machines-reactive.{ads,adb}, sml-machines-deferring.{ads,adb}
 tests/    AUnit suite (test_sml.gpr)
 proof/    SPARK proof target (proof.gpr)
 example/  hello_world.adb, simple_turnstile.adb, orthogonal_regions.adb,
-          run_to_completion.adb + TRACE config (example.gpr)
+          run_to_completion.adb, deferred_events.adb + TRACE config
 example/generated/  hello_world.fsm spec + generate.adb + hand-written logic;
           generates a self-contained machine (generated.gpr)
 docs/     hello_world.dot/.svg (state diagram)

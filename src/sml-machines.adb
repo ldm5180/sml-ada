@@ -35,7 +35,10 @@ is
    end Make;
 
    procedure Process_Event
-     (M : in out Machine; Ctx : in out Context; Evt : Event)
+     (M       : in out Machine;
+      Ctx     : in out Context;
+      Evt     : Event;
+      Handled : out Boolean)
    is
       K : constant Event_Kind := Kind_Of (Evt);
    begin
@@ -52,24 +55,42 @@ is
                   On_Action (T.Action, M.Current, T.To);
                   Execute (T.Action, Ctx, Evt);
                   M.Current := T.To;
+                  Handled := True;
                   return;
                end if;
             end;
          end if;
       end loop;
 
-      On_Unhandled (K, M.Current);
+      Handled := False;
+   end Process_Event;
 
-      case M.On_Unhandled is
-         when Stay          =>
-            null;
+   procedure Process_Event
+     (M : in out Machine; Ctx : in out Context; Evt : Event)
+   is
+      Handled : Boolean;
+   begin
+      Process_Event (M, Ctx, Evt, Handled);
 
-         when Raise_Error   =>
-            raise Unhandled_Event with M.Current'Image & " on " & K'Image;
+      if not Handled then
+         declare
+            K : constant Event_Kind := Kind_Of (Evt);
+         begin
+            On_Unhandled (K, M.Current);
 
-         when Go_To_Default =>
-            M.Current := M.Default;
-      end case;
+            case M.On_Unhandled is
+               when Stay          =>
+                  null;
+
+               when Raise_Error   =>
+                  raise Unhandled_Event
+                    with M.Current'Image & " on " & K'Image;
+
+               when Go_To_Default =>
+                  M.Current := M.Default;
+            end case;
+         end;
+      end if;
    end Process_Event;
 
 end Sml.Machines;
