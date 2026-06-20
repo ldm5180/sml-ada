@@ -110,7 +110,8 @@ procedure Generate is
                      P := P + 1;
                   end loop;
                   Result.Append
-                    (Token'(Ident, To_Unbounded_String (Row (Start .. P - 1))));
+                    (Token'
+                       (Ident, To_Unbounded_String (Row (Start .. P - 1))));
                end;
             else
                raise Spec_Error
@@ -189,7 +190,8 @@ procedure Generate is
       if P > Line'Last or else Line (P) not in ':' | '=' | '>' then
          return "";
       end if;
-      while P <= Line'Last and then Line (P) in ':' | '=' | '>' | ' ' | ASCII.HT
+      while P <= Line'Last
+        and then Line (P) in ':' | '=' | '>' | ' ' | ASCII.HT
       loop
          P := P + 1;
       end loop;
@@ -212,7 +214,8 @@ procedure Generate is
             Line          : constant String := Trim (Get_Line (Spec), Both);
             Looks_Initial : constant Boolean :=
               Line'Length >= 7
-              and then To_Lower (Line (Line'First .. Line'First + 6)) = "initial"
+              and then To_Lower (Line (Line'First .. Line'First + 6))
+                       = "initial"
               and then (Line'Length = 7
                         or else not Is_Ident_Char (Line (Line'First + 7)));
             Start_State   : constant String :=
