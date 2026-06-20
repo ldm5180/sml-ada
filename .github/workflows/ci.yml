@@ -92,8 +92,12 @@ jobs:
 
       - name: Check formatting
         # Tables are wrapped in --!format off/on, so their alignment is kept.
+        # git ls-files keeps this to tracked sources, so the generator's
+        # gitignored outputs under example/generated are never picked up.
         run: |
-          files=$(find src tests/src proof/src example/src example/cfg \( -name '*.ads' -o -name '*.adb' \))
+          files=$(git ls-files 'src/*.ad[sb]' 'tests/src/*.ad[sb]' \
+                               'proof/src/*.ad[sb]' 'example/src/*.ad[sb]' \
+                               'example/cfg/*.ad[sb]' 'example/generated/*.ad[sb]')
           echo "Checking:"; echo "$files"
           gnatformat --no-project --check $files
 
