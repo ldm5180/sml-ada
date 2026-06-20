@@ -38,36 +38,18 @@ is
      (M : in out Machine; Ctx : in out Context; Evt : Event)
    is
       K : constant Event_Kind := Kind_Of (Evt);
-
-      --  One Debug-gated trace sink.  The message is built at the call site
-      --  regardless of Debug, so at -O0 the concatenation runs even when
-      --  tracing is off; it folds away only with inlining (-O2/-O3).  That
-      --  -O0 cost is accepted in exchange for the simpler call sites.
-      procedure Log (Message : String) is
-      begin
-         if Debug then
-            Trace (Message);
-         end if;
-      end Log;
    begin
-      Log ("event " & K'Image & " in state " & M.Current'Image);
+      On_Event (K, M.Current);
 
       for T of M.Table loop
          if T.From = M.Current and then T.On = K then
             declare
                Pass : constant Boolean := Evaluate (T.Guard, Ctx, Evt);
             begin
-               Log ("  guard " & T.Guard'Image & " => " & Pass'Image);
+               On_Guard (T.Guard, Pass);
 
                if Pass then
-                  Log
-                    ("  action "
-                     & T.Action'Image
-                     & "; "
-                     & M.Current'Image
-                     & " -> "
-                     & T.To'Image);
-
+                  On_Action (T.Action, M.Current, T.To);
                   Execute (T.Action, Ctx, Evt);
                   M.Current := T.To;
                   return;
@@ -76,7 +58,7 @@ is
          end if;
       end loop;
 
-      Log ("  unhandled; policy " & M.On_Unhandled'Image);
+      On_Unhandled (K, M.Current);
 
       case M.On_Unhandled is
          when Stay          =>

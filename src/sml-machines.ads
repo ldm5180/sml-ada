@@ -15,9 +15,14 @@ generic
      function Evaluate
        (G : Guard_Kind; Ctx : Context; Evt : Event) return Boolean;
    with procedure Execute (A : Action_Kind; Ctx : in out Context; Evt : Event);
-   Debug : Boolean := False;
-   --  When False every Trace call below is statically eliminated.
-   with procedure Trace (Message : String) is null;
+   --  Structured logging hooks, called with scalars (no message building
+   --  in the engine).  Each defaults to a null procedure, so an instance
+   --  that wants no logging passes nothing and the calls are eliminated
+   --  at every -O level.
+   with procedure On_Event (Evt : Event_Kind; From : State) is null;
+   with procedure On_Guard (Guard : Guard_Kind; Passed : Boolean) is null;
+   with procedure On_Action (Action : Action_Kind; From, To : State) is null;
+   with procedure On_Unhandled (Evt : Event_Kind; From : State) is null;
 package Sml.Machines with SPARK_Mode is
 
    type Transition is record

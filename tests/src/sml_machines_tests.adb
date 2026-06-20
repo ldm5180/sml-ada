@@ -67,14 +67,29 @@ package body Sml_Machines_Tests is
       (Busy, Stop, Always,    Nothing, Done)];
    --!format on
 
-   --  A second instance with tracing on, capturing into Log, exercises
-   --  Process_Event's logging path.
+   --  A second instance whose structured logging hooks capture into Log,
+   --  exercising Process_Event's logging path.
    Log : Ada.Strings.Unbounded.Unbounded_String;
 
-   procedure Capture (Message : String) is
+   procedure Note (S : String) is
    begin
-      Ada.Strings.Unbounded.Append (Log, Message & ASCII.LF);
-   end Capture;
+      Ada.Strings.Unbounded.Append (Log, S & ASCII.LF);
+   end Note;
+
+   procedure On_Event (E : Ev; From : St) is
+   begin
+      Note (E'Image & " " & From'Image);
+   end On_Event;
+
+   procedure On_Guard (G : G_Kind; Passed : Boolean) is
+   begin
+      Note (G'Image & " " & Passed'Image);
+   end On_Guard;
+
+   procedure On_Action (A : A_Kind; From, To : St) is
+   begin
+      Note (A'Image & " " & From'Image & " " & To'Image);
+   end On_Action;
 
    package M_Dbg is new
      Sml.Machines
@@ -87,8 +102,9 @@ package body Sml_Machines_Tests is
         Kind_Of     => Kind_Of,
         Evaluate    => Evaluate,
         Execute     => Execute,
-        Debug       => True,
-        Trace       => Capture);
+        On_Event    => On_Event,
+        On_Guard    => On_Guard,
+        On_Action   => On_Action);
 
    --  Derived from Table so the two cannot drift: the same rows, retyped for
    --  the tracing instance (whose Transition type is a distinct instantiation).

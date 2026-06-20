@@ -148,15 +148,29 @@ machines — are composed by hand: just call each one's `Process_Event`. See
 - `On_Unhandled` decides what `Process_Event` does when no row matches: `Stay`
   (default), `Raise_Error`, or `Go_To_Default`.
 
-### Tracing
+### Logging hooks
 
-Instantiate with `Debug => True` and a `Trace` procedure to log, for every
-event: the event kind, the current state, each guard tried and its result, the
-action, and the resulting state. The trace calls route through one `Debug`-gated
-`Log` sink, so `Debug => False` (the default) is silent. The messages are built
-at the call site and discarded when tracing is off; an optimized build
-(`-O2`/`-O3`) inlines the no-op `Log` and folds that string-building away to
-nothing, so disabled tracing costs nothing in release. Build the example with
+The engine takes four structured logging hooks — `On_Event`, `On_Guard`,
+`On_Action`, `On_Unhandled` — and calls them with *scalars* (the event kind,
+state, guard/action and result) as it runs. No message is ever built inside the
+engine. Each hook defaults to a null procedure, so an instance that wants no
+logging passes nothing and the calls vanish at every optimization level:
+
+```ada
+procedure On_Event (Evt : Event_Kind; From : State) is
+begin
+   if Trace_Config.Enabled then          --  gate it however you like
+      Put_Line ("event " & Evt'Image & " in state " & From'Image);
+   end if;
+end On_Event;
+--  ... On_Guard, On_Action, On_Unhandled likewise ...
+
+package SM is new Sml.Machines (..., On_Event => On_Event, ...);
+```
+
+Because the hook is a real procedure, *you* decide the format, where it goes,
+and when it's active — gating on a static `Boolean` (as the example does)
+folds disabled tracing away to nothing even at `-O0`. Build the example with
 tracing on to see it:
 
 ```console
