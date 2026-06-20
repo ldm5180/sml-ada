@@ -91,6 +91,26 @@ type Event (Kind : Event_Kind := E_Timeout) is record
 end record;
 ```
 
+### No-payload machines
+
+If your events carry no data, skip the variant record and `Kind_Of` entirely:
+instantiate `Sml.Simple_Machines` with the event enumeration directly. It
+re-exports the same `Machine`, `Transition_Table`, `Make` and `Process_Event`
+(with the same SPARK contracts) — there's just less to write:
+
+```ada
+package M is new Sml.Simple_Machines
+  (State, Event, Context, Guard_Kind, Action_Kind, Evaluate, Execute);
+use M;
+
+Table : constant Transition_Table :=
+  [(Locked,   Coin, Always, Take_Coin, Unlocked),
+   (Unlocked, Push, Always, Nothing,   Locked)];
+```
+
+Here `Evaluate`/`Execute` receive the event *kind* directly (there's no payload
+to carry). See `example/simple_turnstile.adb`.
+
 ### Completeness & unhandled events
 
 `Make` takes two policy knobs:
@@ -250,10 +270,11 @@ keeps their hand-aligned columns.
 ## Layout
 
 ```
-src/      sml.ads, sml-machines.{ads,adb}, sml-machines-operators.ads
+src/      sml.ads, sml-machines.{ads,adb}, sml-machines-operators.ads,
+          sml-simple_machines.ads (no-payload layer)
 tests/    AUnit suite (test_sml.gpr)
 proof/    SPARK proof target (proof.gpr)
-example/  hello_world.adb + TRACE on/off config (example.gpr)
+example/  hello_world.adb, simple_turnstile.adb + TRACE config (example.gpr)
 example/generated/  hello_world.fsm spec + generate.adb + hand-written logic;
           generates a self-contained machine (generated.gpr)
 docs/     hello_world.dot/.svg (state diagram)
