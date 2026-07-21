@@ -8,6 +8,8 @@ with Sml_Deferring_Tests;
 with Sml_Composite_Tests;
 with Sml_Bundled_Tests;
 with Sml_Tracing_Tests;
+with Sml_Trace_Gate_Tests;
+with Sml_Effects_Loop_Tests;
 
 package body Sml_Suite is
 
@@ -28,6 +30,8 @@ package body Sml_Suite is
       Add (new Sml_Composite_Tests.Test);
       Add (new Sml_Bundled_Tests.Test);
       Add (new Sml_Tracing_Tests.Test);
+      Add (new Sml_Trace_Gate_Tests.Test);
+      Add (new Sml_Effects_Loop_Tests.Test);
       return Result;
    end Suite;
 
