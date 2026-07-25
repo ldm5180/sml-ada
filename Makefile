@@ -22,7 +22,8 @@ test:
 
 ## prove       Run the SPARK proof (same flags as CI)
 prove:
-	alr exec -- gnatprove -P proof/proof.gpr -j0 --level=2 --checks-as-errors=on
+	alr exec -- gnatprove -P proof/proof.gpr -j0 --level=2 --checks-as-errors=on \
+	  --warnings=error
 
 ## format      Check formatting (per project, explicit files; no warnings)
 format:

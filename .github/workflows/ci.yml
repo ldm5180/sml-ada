@@ -72,8 +72,12 @@ jobs:
           echo "$HOME/.alire/bin" >> "$GITHUB_PATH"
 
       - name: Prove
-        # --checks-as-errors=on fails the job if any check is unproved.
-        run: alr exec -- gnatprove -P proof/proof.gpr -j0 --level=2 --checks-as-errors=on
+        # --checks-as-errors=on fails the job if any check is unproved;
+        # --warnings=error fails it on any flow warning too (an output the
+        # caller never reads is a bug or a dead parameter, never noise).
+        run: |
+          alr exec -- gnatprove -P proof/proof.gpr -j0 --level=2 \
+            --checks-as-errors=on --warnings=error
 
   format:
     name: Formatting (gnatformat --check)
