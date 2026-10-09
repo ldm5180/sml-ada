@@ -364,6 +364,13 @@ make run       # build the example (release: -O3, no tracing) and run hello_worl
 make format    # check formatting
 ```
 
+`make prove` first runs `tools/phase1_guard.py`, which drops gnatprove's
+phase-1 ALIs when a `gnatprove -u` left them disagreeing on a source's checksum
+(the state in which gnatprove's gprbuild spins forever), and holds
+`proof/obj/.prove.lock` across the guard and gnatprove, since two gnatprove runs
+on one tree corrupt each other; a manual `gnatprove -u` takes the same lock:
+`flock proof/obj/.prove.lock alr exec -- gnatprove -P proof/proof.gpr -u <unit> ...`.
+
 The example builds in two profiles: `release` (`-O3`, tracing off, the default)
 and `debug` (`-O0`, tracing on) — `make debug` / `make run-trace` use the latter.
 Each profile builds on all cores (`-j0`) into its own `bin/<profile>` and
